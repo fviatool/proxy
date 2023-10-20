@@ -117,6 +117,6 @@ reply_header_access All deny all
 shutdown_lifetime 3 seconds
 include /etc/squid/outgoing.conf
 EOF
-wget https://github.com/fviatool/proxy/blame/main/setup.sh
+wget https://raw.githubusercontent.com/fviatool/proxy/main/setup.sh
 chmod 0755 /root/setup.sh
 ./setup.sh
