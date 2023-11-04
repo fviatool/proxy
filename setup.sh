@@ -6,8 +6,8 @@ PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 FIRST_PORT=30001
 LAST_PORT=30010
 # Set username and password
-USERNAME="oldboy"
-PASSWORD="dota2vn"
+USERNAME="admin
+PASSWORD="admin"
 
 INTERFACE="eth0"
 # Generate hashed password
