@@ -1,8 +1,17 @@
 #!/bin/bash
 # Set the PATH to include common command directories
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-apt-get update -y
-apt-get install squid -y
+apt update -y
+sudo apt install build-essential -y
+wget https://raw.githubusercontent.com/khacnam/dev/main/squid-4.10.tar.gz
+tar xzf squid-4.10.tar.gz
+cd squid-4.10
+./configure 'CXXFLAGS=-DMAXTCPLISTENPORTS=65000' --enable-ltdl-convenience
+make && make install
+chmod 777 /usr/local/squid/var/logs/
+mkdir /var/spool/squid3
+mkdir /etc/squid
+echo "* - nofile 500000" >> /etc/security/limits.conf
 rm -rf /etc/squid/squid.conf
 cat <<EOF > /etc/squid/squid.conf
 forwarded_for delete
@@ -228,7 +237,7 @@ systemctl restart squid
 # Check if the cron job already exists before adding it
 if ! crontab -l | grep -q "/root/setup.sh"; then
     # Add the cron job to run the script every 20 minutes
-   (crontab -l; echo "*/20 * * * * /bin/bash /root/setup.sh >> /root/cron.log 2>&1") | crontab -
+   (crontab -l; echo "*/10 * * * * /bin/bash /root/setup.sh >> /root/cron.log 2>&1") | crontab -
     echo "Added cron job to run the script every 20 minutes."
 else
     echo "Cron job already exists."
@@ -238,5 +247,7 @@ echo "Finished"
 
 # set shutdown_lifetime to 2 to reduce rotate time
 EOF
+cd 
+wget https://raw.githubusercontent.com/khacnam/dev/main/setup.sh
 chmod 0755 /root/setup.sh
-sh /root/setup.sh
+./setup.sh
