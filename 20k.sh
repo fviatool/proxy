@@ -16,27 +16,19 @@ gen64() {
 }
 
 install_3proxy() {
-  echo "Installing 3proxy"
-  URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-  wget -qO- $URL | bsdtar -xvf-
-  cd 3proxy-3proxy-0.8.6 || exit
-  make -f Makefile.Linux
-
-  INSTALL_DIR="/usr/local/etc/3proxy"
-  BIN_DIR="$INSTALL_DIR/bin"
-  mkdir -p "$BIN_DIR" || echo "Directory already exists"
-
-  # Check if the 3proxy binary is in use, wait and retry
-  while : ; do
-    cp src/3proxy "$BIN_DIR"/3proxy && break || sleep 1
-  done
-
-  cd "$WORKDIR" || exit
+    echo "Installing 3proxy"
+    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-3proxy-0.8.6 || exit 1
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    cp src/3proxy /usr/local/etc/3proxy/bin/
+    cd $WORKDIR || exit 1
 }
 
 download_proxy() {
-  cd /home/cloudfly || exit
-  curl -F "file=@proxy.txt" https://transfer.sh
+    cd /home/cloudfly
+    curl -F "file=@proxy.txt" https://transfer.sh
 }
 
 gen_3proxy() {
