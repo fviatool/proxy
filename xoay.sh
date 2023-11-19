@@ -24,7 +24,7 @@ auth_ip() {
 }
 
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -101,7 +101,7 @@ EOF
 # Automatically rotate proxy every 10 minutes
 (crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
-echo "installing apps"
+echo "Installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
@@ -131,7 +131,7 @@ while :; do
 done
 
 LAST_PORT=$(($FIRST_PORT + 10000))
-echo "LAST_PORT is $LAST_PORT. Continue..."
+echo "LAST_PORT is $LAST_PORT. Continuing..."
 
 gen_data >${WORKDIR}/data.txt
 gen_iptables >${WORKDIR}/boot_iptables.sh
