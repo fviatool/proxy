@@ -106,15 +106,18 @@ yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
-echo "working folder = /home/cloudfly"
+ALLOWED_IPS=("113.176.102.183" "115.75.249.144")
+
+echo "allow ${ALLOWED_IPS[@]}" >> /usr/local/etc/3proxy/3proxy.cfg
+
+echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $WORKDIR || exit 1
+mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-
-echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
+mkdir $WORKDIR && cd $WORKDIR || exit 1
 
 while :; do
     read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
