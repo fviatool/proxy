@@ -113,7 +113,14 @@ echo "allow ${ALLOWED_IPS[@]}" >> /usr/local/etc/3proxy/3proxy.cfg
 echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+
+# Check if the working directory exists
+if [ -d "$WORKDIR" ]; then
+    echo "Directory $WORKDIR already exists. Exiting..."
+    exit 1
+fi
+
+mkdir $WORKDIR && cd $_ || exit 1
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
