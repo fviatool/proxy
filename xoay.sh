@@ -131,7 +131,7 @@ gen_iptables >"${WORKDIR}/boot_iptables.sh"
 gen_ifconfig >"${WORKDIR}/boot_ifconfig.sh"
 rotate_proxy_script >"${WORKDIR}/rotate_3proxy.sh"
 
-chmod +x "${WORKDIR}/boot_*.sh" /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
+chmod +x "${WORKDIR}/boot_ifconfig.sh" "${WORKDIR}/boot_iptables.sh" /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
 
 gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
