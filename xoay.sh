@@ -6,8 +6,7 @@ random() {
     echo
 }
 
-array=("1" "2" "3" "4" "5" "6" "7" "8" "9" "0" "a" "b" "c" "d" "e" "f")
-
+array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
     ip64() {
         echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
@@ -21,22 +20,22 @@ auth_ip() {
     while read ip; do
         echo "proxy -6 -n -a -p$port -i$IP4 -e$ip"
         ((port+=1))
-    done < "$WORKDIR/ipv6.txt"
+    done < $WORKDIR/ipv6.txt
 }
 
 install_3proxy() {
     echo "Installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- "$URL" | bsdtar -xvf-
-    cd 3proxy-3proxy-0.8.6 || exit 1
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd "$WORKDIR" || exit 1
+    cd $WORKDIR || exit 1
 }
 
 download_proxy() {
-    cd /home/cloudfly || exit 1
+    cd /home/cloudfly
     curl -F "file=@proxy.txt" https://transfer.sh
 }
 
@@ -58,28 +57,32 @@ flush
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
 "$(auth_ip)\n" \
-"flush\n"}' "${WORKDATA}")
+"flush\n"}' ${WORKDATA})
 EOF
 }
 
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' "${WORKDATA}")
+$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
 gen_data() {
-    seq "$FIRST_PORT" "$LAST_PORT" | while read -r port; do
+    seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
 gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDATA}"
+    cat <<EOF
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+EOF
 }
 
 gen_ifconfig() {
-    awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' "${WORKDATA}"
+    cat <<EOF
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+EOF
 }
 
 rotate_proxy_script() {
@@ -110,7 +113,10 @@ echo "allow ${ALLOWED_IPS[@]}" >> /usr/local/etc/3proxy/3proxy.cfg
 echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p "$WORKDIR" && cd "$_" || exit 1
+mkdir -p $WORKDIR && cd $WORKDIR || exit 1
+
+IP4=$(curl -4 -s icanhazip.com)
+IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 while :; do
     read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
@@ -131,7 +137,8 @@ gen_iptables >"${WORKDIR}/boot_iptables.sh"
 gen_ifconfig >"${WORKDIR}/boot_ifconfig.sh"
 rotate_proxy_script >"${WORKDIR}/rotate_3proxy.sh"
 
-chmod +x "${WORKDIR}/boot_ifconfig.sh" "${WORKDIR}/boot_iptables.sh" /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
+chmod +x "${WORKDIR}/boot_ifconfig.sh" "${WORKDIR}/boot_iptables.sh" /etc/rc.local
+chmod +x "${WORKDIR}/rotate_3proxy.sh" /usr/local/etc/3proxy/rotate_3proxy.sh
 
 gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
