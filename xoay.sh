@@ -123,7 +123,7 @@ while :; do
     fi
 done
 
-LAST_PORT=$(($FIRST_PORT + 5000))
+LAST_PORT=$(($FIRST_PORT + 10000))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >"${WORKDIR}/data.txt"
