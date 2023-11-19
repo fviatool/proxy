@@ -24,7 +24,7 @@ auth_ip() {
 }
 
 install_3proxy() {
-    echo "Installing 3proxy"
+    echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -101,30 +101,24 @@ EOF
 # Automatically rotate proxy every 10 minutes
 (crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
-echo "Installing apps"
+echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
+
+echo "Working folder = /home/cloudfly"
+WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
+
+# Create working directory if it doesn't exist
+mkdir -p $WORKDIR
+
+# Change to working directory
+cd $WORKDIR || exit 1
 
 install_3proxy
 
 ALLOWED_IPS=("113.176.102.183" "115.75.249.144")
 
 echo "allow ${ALLOWED_IPS[@]}" >> /usr/local/etc/3proxy/3proxy.cfg
-
-echo "Working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
-
-# Check if the working directory exists
-if [ -d "$WORKDIR" ]; then
-    echo "Directory $WORKDIR already exists. Exiting..."
-    exit 1
-fi
-
-mkdir $WORKDIR && cd $_ || exit 1
-
-IP4=$(curl -4 -s icanhazip.com)
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-mkdir $WORKDIR && cd $WORKDIR || exit 1
 
 while :; do
     read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
@@ -137,8 +131,8 @@ while :; do
     fi
 done
 
-LAST_PORT=$(($FIRST_PORT + 10000))
-echo "LAST_PORT is $LAST_PORT. Continuing..."
+LAST_PORT=$(($FIRST_PORT + 750))
+echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >${WORKDIR}/data.txt
 gen_iptables >${WORKDIR}/boot_iptables.sh
