@@ -111,90 +111,34 @@ menu() {
     echo "5. Exit"
 }
 
-echo "Installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
-
-cat << EOF > /etc/rc.d/rc.local
-#!/bin/bash
-touch /var/lock/subsys/local
-EOF
-
-install_3proxy
-
-# Set your allowed private IP addresses here
-ALLOWED_IPS=("113.176.102.183" "115.75.249.144")
-
-echo "allow ${ALLOWED_IPS[@]}" >> /usr/local/etc/3proxy/3proxy.cfg
-
-echo "Working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
-
-IP4=$(curl -4 -s icanhazip.com)
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-
-echo "Internal IP = ${IP4}. External sub for IPv6 = ${IP6}"
-
-while :; do
-    read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
-    [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
-    if ((FIRST_PORT >= 10000 && FIRST_PORT <= 60000)); then
-        echo "OK! Valid number"
-        break
-    else
-        echo "Number out of range, try again"
-    fi
-done
-
-LAST_PORT=$(($FIRST_PORT + 10000))
-echo "LAST_PORT is $LAST_PORT. Continuing..."
-
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x boot_*.sh /etc/rc.local
-
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-
-cat >>/etc/rc.local <<EOF
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
-ulimit -n 1000048
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
-EOF
-
-# Start the proxy rotation and restart in the background
-rotate_and_restart &
-
-chmod 0755 /etc/rc.local
-
 while true; do
     menu
     read -p "Choose an option (1-5): " choice
 
     case $choice in
         1)
-            create_proxy
-            echo "Proxy created and added to the list."
-            download_proxy        ;;
-    2)
-        rotate_proxies
-        ;;
-    3)
-        show_proxy_list
-        ;;
-    4)
-        download_proxy
-        ;;
-    5)
-        echo "Exiting..."
-        exit 0
-        ;;
-    *)
-        echo "Invalid option. Please choose from 1 to 5."
-        ;;
-esac
+            gen_data >$WORKDIR/data.txt
+            gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+            echo "Proxy created."
+            download_proxy
+            ;;
+        2)
+            rotate_proxies
+            ;;
+        3)
+            show_proxy_list
+            ;;
+        4)
+            download_proxy
+            ;;
+        5)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid option. Please choose from 1 to 5."
+            ;;
+    esac
 
-read -p "Press Enter to continue..."
+    read -p "Press Enter to continue..."
 done
