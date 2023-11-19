@@ -33,6 +33,10 @@ install_3proxy() {
     cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR || exit 1
 }
+download_proxy() {
+    cd /home/cloudfly || exit 1
+    curl -F "file=@proxy.txt" https://transfer.sh
+}
 
 gen_3proxy() {
     cat <<EOF
