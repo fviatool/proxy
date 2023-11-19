@@ -109,7 +109,7 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 
 # Create working directory if it doesn't exist
-mkdir -p $WORKDIR
+mkdir -p /home/cloudfly && cd /home/cloudfly || exit 1
 
 # Change to working directory
 cd $WORKDIR || exit 1
