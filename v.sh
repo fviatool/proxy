@@ -36,10 +36,12 @@ gen_iptables() {
 }
 
 gen_3proxy() {
-    awk -F "/" '{print "\ndaemon\nmaxconn 2000\nnserver 1.1.1.1\nnserver 8.8.4.4\nnserver 2001:4860:4860::8888\nnserver 2001:4860:4860::8844\nnscache 65536\ntimeouts 1 5 30 60 180 1800 15 60\nsetgid 65535\nsetuid 65535\nstacksize 6291456 \nflush\n\n" \
-    "" $1 "\n" \
-    "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-    "flush\n"}' ${WORKDATA}
+    awk -F "/" '{
+        print "\ndaemon\nmaxconn 2000\nnserver 1.1.1.1\nnserver 8.8.4.4\nnserver 2001:4860:4860::8888\nnserver 2001:4860:4860::8844\nnserver 2404:6800:4005:813::2003\nnscache 65536\ntimeouts 1 5 30 60 180 1800 15 60\nsetgid 65535\nsetuid 65535\nstacksize 6291456 \nflush\n"
+        print "\n" $1 "\n"
+        print "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n"
+        print "flush\n"
+    }' ${WORKDATA}
 }
 
 gen_proxy_file_for_user() {
