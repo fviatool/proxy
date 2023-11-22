@@ -1,7 +1,4 @@
-#!/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-
-random() {
+m() {
 	tr </dev/urandom -dc A-Za-z0-9 | head -c5
 	echo
 }
@@ -289,9 +286,9 @@ echo "Starting Proxy"
 
 #!/bin/bash
 
+# Constants
 CONFIG_FILE="/usr/local/etc/app_config.conf"
 PROXY_CONFIG_FILE="/usr/local/etc/3proxy/3proxy.cfg"
-LOG_FILE="/var/log/3proxy.log"
 
 display_menu() {
   clear
@@ -320,33 +317,26 @@ menu_option() {
     8) exit ;;
     *) echo "Invalid choice. Please choose again." ;;
   esac
-}
 
+# Apply configuration changes
 apply_configuration_changes() {
-  # This is a placeholder function.
-  # In a real deployment, you might reload or apply your specific configuration here.
   echo "Applying configuration changes..."
   # Example: systemctl restart your_service
   sleep 2
 }
 
+# Enable IP Authentication function
 enable_ip_authentication() {
-  echo "Đang Bật Xác Thực IP..."
+  echo "Enabling IP Authentication..."
 
-  read -p "Nhập ít nhất một địa chỉ IP để xác thực (sử dụng dấu phẩy để phân tách nếu có nhiều IPs): " ip_addresses
+  read -p "Enter at least one IP address for authentication (use commas to separate multiple IPs): " ip_addresses
 
-  if [ -f "$CONFIG_FILE" ]; then
-    # Kiểm tra xem người dùng đã nhập ít nhất một địa chỉ IP hay không
-    if [ -n "$ip_addresses" ]; then
-      # Thay thế dòng cấu hình IP_AUTHENTICATION=false bằng IP_AUTHENTICATION=true và thêm danh sách IP cần xác thực
-      sed -i "s/IP_AUTHENTICATION=false/IP_AUTHENTICATION=true\nALLOWED_IPS=\"$ip_addresses\"/" "$CONFIG_FILE"
-      apply_configuration_changes
-      echo "Đã Bật Xác Thực IP thành công cho các địa chỉ: $ip_addresses."
-    else
-      echo "Lỗi: Ít nhất một địa chỉ IP là bắt buộc để Bật Xác Thực IP."
-    fi
+  if [ -f "$CONFIG_FILE" ] && [ -n "$ip_addresses" ]; then
+    sed -i "s/IP_AUTHENTICATION=false/IP_AUTHENTICATION=true\nALLOWED_IPS=\"$ip_addresses\"/" "$CONFIG_FILE"
+    apply_configuration_changes
+    echo "IP Authentication enabled successfully for addresses: $ip_addresses."
   else
-    echo "Lỗi: Không tìm thấy tệp cấu hình."
+    echo "Error: Configuration file not found or no IP address provided."
   fi
 
   sleep 2
