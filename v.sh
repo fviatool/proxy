@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -79,12 +79,12 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
-echo "Installing dependencies..."
+echo "Installing apps..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
-echo "Setting up working folder..."
+echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
@@ -201,8 +201,8 @@ disable_ip_authentication() {
 generate_new_ports() {
   echo "Generating New Ports..."
 
-  starting_port=10000
-  number_of_ports=5000
+  starting_port=50000
+  number_of_ports=1500
 
   for ((i = 0; i < number_of_ports; i++)); do
     new_port=$((starting_port + i))
