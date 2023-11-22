@@ -7,7 +7,6 @@ random() {
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
-
 gen64() {
     ip64() {
         echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
@@ -37,25 +36,10 @@ gen_iptables() {
 }
 
 gen_3proxy() {
-    cat <<EOF
-daemon
-maxconn 2000
-nserver 1.1.1.1
-nserver 8.8.4.4
-nserver 2001:4860:4860::8888
-nserver 2001:4860:4860::8844
-nscache 65536
-timeouts 1 5 30 60 180 1800 15 60
-setgid 65535
-setuid 65535
-stacksize 6291456 
-flush
-
-$(awk -F "/" '{print "\n" \
-"" $1 "\n" \
-"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' ${WORKDATA})
-EOF
+    awk -F "/" '{print "\ndaemon\nmaxconn 2000\nnserver 1.1.1.1\nnserver 8.8.4.4\nnserver 2001:4860:4860::8888\nnserver 2001:4860:4860::8844\nnscache 65536\ntimeouts 1 5 30 60 180 1800 15 60\nsetgid 65535\nsetuid 65535\nstacksize 6291456 \nflush\n\n" \
+    "" $1 "\n" \
+    "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
+    "flush\n"}' ${WORKDATA}
 }
 
 gen_proxy_file_for_user() {
@@ -69,14 +53,15 @@ echo 'update_3proxy_config "$new_ipv6"' >> "$rotate_script"
 echo 'restart_3proxy' >> "$rotate_script"
 chmod +x "$rotate_script"
 
-# Add rotation to crontab for automatic rotation
+# Add to crontab for automatic rotation
 add_rotation_cronjob() {
     echo "*/10 * * * * $rotate_script" >> /etc/crontab
 }
 
-echo "Installing necessary packages..."
+echo "Installing dependencies..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
+echo "Configuring the application..."
 cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
 touch /var/lock/subsys/local
@@ -84,194 +69,117 @@ EOF
 
 install_3proxy
 
-echo "Working directory set to /home/cloudfly"
+echo "Setting up working directory..."
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p $WORKDIR && cd $_  # Use -p to avoid errors if the directory already exists
+mkdir -p $WORKDIR && cd $WORKDIR
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal IP = ${IP4}. External IPv6 subnet = ${IP6}"
+echo "Internal IP = ${IP4}. External IPv6 Subnet = ${IP6}"
 
 while :; do
-    read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
-    if [[ ! $FIRST_PORT =~ ^[0-9]+$ || $FIRST_PORT -lt 10000 || $FIRST_PORT -gt 60000 ]]; then
-        echo "Invalid input. Enter a valid number between 10000 and 60000."
-    else
+    read -p "Enter FIRST_PORT (between 10000 and 60000): " FIRST_PORT
+    [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
+    if ((FIRST_PORT >= 10000 && FIRST_PORT <= 60000)); then
         echo "OK! Valid number"
         break
+    else
+        echo "Number is out of range, please try again"
     fi
 done
 
-LAST_PORT=$(($FIRST_PORT + 3000))
+LAST_PORT=$(($FIRST_PORT + 5000))
 echo "LAST_PORT is $LAST_PORT. Continuing..."
 
-gen_data > ${WORKDIR}/data.txt
-gen_iptables > ${WORKDIR}/boot_iptables.sh
+gen_data >${WORKDIR}/data.txt
+gen_iptables >${WORKDIR}/boot_iptables.sh
 
-gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
-gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+cat >>/etc/rc.local <<EOF
+bash ${WORKDIR}/boot_iptables.sh
+ulimit -n 10048
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+EOF
 
-add_to_rc_local
+chmod 0755 /etc/rc.local
+bash /etc/rc.local
 
-gen_proxy_file_for_user
-rm -rf /root/3proxy-3proxy-0.8.6
-echo "Starting Proxy"
-
-#!/bin/bash
-
-# Constants
-CONFIG_FILE="/usr/local/etc/app_config.conf"
-PROXY_CONFIG_FILE="/usr/local/etc/3proxy/3proxy.cfg"
-
-display_menu() {
-  clear
-  echo "========== 3Proxy Management Menu =========="
-  echo "[1] Enable IP Authentication"
-  echo "[2] Disable IP Authentication"
-  echo "[3] Generate New Ports"
-  
-  echo "[4] Enable Auto Rotation"
-  echo "[5] Create and Download Proxies"
-  echo "[6] Show Proxy List"
-  echo "[7] Download Proxy List"
-  echo "[8] Exit"
-  echo "============================================"
-}
-
-menu_option() {
-  read -p "Enter your choice [1-8]: " choice
-  case $choice in
-    1) enable_ip_authentication ;;
-    2) disable_ip_authentication ;;
-    3) generate_new_ports ;;
-    4) enable_auto_rotate ;;
-    5) create_and_download_proxies ;;
-    6) show_proxy_list ;;
-    7) download_proxy_list ;;
-    8) exit ;;
-    *) echo "Invalid choice. Please choose again." ;;
-  esac
-
-# Apply configuration changes
-apply_configuration_changes() {
-  echo "Applying configuration changes..."
-  # Example: systemctl restart your_service
-  sleep 2
-}
-
-# Enable IP Authentication function
-enable_ip_authentication() {
-  echo "Enabling IP Authentication..."
-
-  read -p "Enter at least one IP address for authentication (use commas to separate multiple IPs): " ip_addresses
-
-  if [ -f "$CONFIG_FILE" ] && [ -n "$ip_addresses" ]; then
-    sed -i "s/IP_AUTHENTICATION=false/IP_AUTHENTICATION=true\nALLOWED_IPS=\"$ip_addresses\"/" "$CONFIG_FILE"
-    apply_configuration_changes
-    echo "IP Authentication enabled successfully for addresses: $ip_addresses."
-  else
-    echo "Error: Configuration file not found or no IP address provided."
-  fi
-
-  sleep 2
-}
-
-disable_ip_authentication() {
-  echo "Disabling IP Authentication..."
-
-  if [ -f "$CONFIG_FILE" ]; then
-    sed -i 's/IP_AUTHENTICATION=true/IP_AUTHENTICATION=false/' "$CONFIG_FILE"
-    apply_configuration_changes
-  else
-    echo "Error: Configuration file not found."
-  fi
-
-  echo "IP Authentication disabled successfully."
-  sleep 2
-}
-
-generate_new_ports() {
-  echo "Generating New Ports..."
-
-  starting_port=10000
-  number_of_ports=5000
-
-  for ((i = 0; i < number_of_ports; i++)); do
-    new_port=$((starting_port + i))
-    echo "New Port: $new_port"
-    # Your logic to use the new port as needed
-  done
-
-  echo "New ports generated successfully."
-  sleep 2
-}
-
-enable_auto_rotate() {
-  echo "Enabling Auto Rotation..."
-
-  auto_rotate=true
-
-  while [ "$auto_rotate" = true ]; do
-    rotate_proxies
-    sleep 600  # Sleep for 10 minutes
-  done
-
-  echo "Disabling Auto Rotation."
-}
-
-create_and_download_proxies() {
-  echo "Creating and Downloading Proxies..."
-
-  gen_data > "$PROXY_CONFIG_FILE"
-  download_proxy
-  echo "Proxies created and downloaded successfully."
-  sleep 2
+# Adjusted menu
+show_proxy_list() {
+    echo "Proxy List:"
+    cat proxy.txt
 }
 
 download_proxy() {
-  echo "Downloading proxies..."
-  curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
-  echo "Proxies downloaded successfully."
-}
-
-show_proxy_list() {
-  echo "Proxy List:"
-  cat proxy.txt
-}
-
-download_proxy_list() {
-  echo "Downloading proxy list..."
-  curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
-  echo "Proxy list downloaded."
+    echo "Downloading proxies..."
+    curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
+    echo "Proxies downloaded successfully."
 }
 
 rotate_proxies() {
-  echo "Rotating proxies..."
-  new_ipv6=$(get_new_ipv6)
-  update_3proxy_config "$new_ipv6"
-  restart_3proxy
-  echo "Proxies rotated successfully."
+    while true; do
+        sleep 600  # Sleep for 10 minutes
+        echo "Rotating proxies..."
+        gen_data >$WORKDIR/data.txt
+        gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+        echo "Proxies rotated."
+    done
 }
 
-get_new_ipv6() {
-  random_ipv6=$(openssl rand -hex 8 | sed 's/\(..\)/:\1/g; s/://1')
-  echo "$random_ipv6"
+# Function to rotate and restart proxies
+rotate_and_restart() {
+    while true; do
+        for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
+            IPV6=$(head -n $i $WORKDIR/ipv6.txt | tail -n 1)
+            /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h$IP4 -e$IPV6 -p$i
+        done
+        /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+        sleep 900  # Sleep for 15 minutes (900 seconds)
+    done
 }
 
-update_3proxy_config() {
-  new_ipv6=$1
-  sed -i "s/old_ipv6_address/$new_ipv6/" "$PROXY_CONFIG_FILE"
+# Adjusted menu
+show_menu() {
+    clear
+    echo "Menu:"
+    echo "1. Generate and Update proxies"
+    echo "2. Rotate proxies automatically"
+    echo "3. Show proxy list"
+    echo "4. Download proxy list"
+    echo "5. Exit"
 }
 
-restart_3proxy() {
-  systemctl restart 3proxy.service
-}
-
-# Gọi menu quản lý 3Proxy
 while true; do
-  display_menu
-  menu_option
+    show_menu
+    read -p "Choose an option (1-5): " choice
+
+    case $choice in
+        1)
+            gen_data >${WORKDIR}/data.txt
+            gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+            echo "Proxies generated and updated in the list."
+            ;;
+        2)
+            rotate_proxies &
+            echo "Automatic proxy rotation started."
+            ;;
+        3)
+            show_proxy_list
+            ;;
+        4)
+            download_proxy
+            ;;
+        5)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid option. Please choose between 1 and 5."
+            ;;
+    esac
+
+    sleep 2
 done
