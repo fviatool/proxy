@@ -1,31 +1,18 @@
 #!/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-# Constants
-CONFIG_FILE="/usr/local/etc/app_config.conf"
-PROXY_CONFIG_FILE="/usr/local/etc/3proxy/3proxy.cfg"
-WORKDIR="/home/cloudfly"
-
-# Functions
-apply_configuration_changes() {
-  echo "Applying configuration changes..."
-  # Example: systemctl restart your_service
-  sleep 2
+random() {
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
-enable_ip_authentication() {
-  echo "Enabling IP Authentication..."
+array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 
-  read -p "Enter at least one IP address for authentication (use commas to separate multiple IPs): " ip_addresses
-
-  if [ -f "$CONFIG_FILE" ] && [ -n "$ip_addresses" ]; then
-    sed -i "s/IP_AUTHENTICATION=false/IP_AUTHENTICATION=true\nALLOWED_IPS=\"$ip_addresses\"/" "$CONFIG_FILE"
-    apply_configuration_changes
-    echo "IP Authentication enabled successfully for addresses: $ip_addresses."
-  else
-    echo "Error: Configuration file not found or no IP address provided."
-  fi
-
-  sleep 2
+gen64() {
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
 install_3proxy() {
@@ -57,51 +44,25 @@ flush
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
 "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' "${WORKDIR}/data.txt")
+"flush\n"}' "${WORKDATA}")
 EOF
 }
 
 gen_proxy_file_for_user() {
-    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' "${WORKDIR}/data.txt" > "${WORKDIR}/proxy.txt"
+    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' "${WORKDATA}" > "${WORKDIR}/proxy.txt"
 }
-
-gen_data() {
-    seq "$FIRST_PORT" "$LAST_PORT" | while read -r port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
-    done
-}
-
-gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDIR}/data.txt"
-}
-
-gen_ifconfig() {
-    awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' "${WORKDIR}/data.txt"
-}
-
-add_to_rc_local() {
-    cat <<EOF >> /etc/rc.local
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
-ulimit -n 10048
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
-EOF
-}
-
-add_rotation_cronjob() {
-    echo "*/10 * * * * bash ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
-}
-
-echo "Installing apps..."
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 rotate_script="${WORKDIR}/rotate_proxies.sh"
 echo '#!/bin/bash' > "$rotate_script"
 echo 'new_ipv6=$(get_new_ipv6)' >> "$rotate_script"
 echo 'update_3proxy_config "$new_ipv6"' >> "$rotate_script"
-echo 'restart_x "$rotate_script"
+echo 'restart_3proxy' >> "$rotate_script"
+chmod +x "$rotate_script"
 
-add_rotation_cronjob
+# Add rotation to crontab for automatic rotation
+add_rotation_cronjob() {
+    echo "*/10 * * * * $rotate_script" >> /etc/crontab
+}
 
 echo "Installing necessary packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
@@ -116,7 +77,7 @@ install_3proxy
 echo "Thư mục làm việc = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir "$WORKDIR" && cd "$_"
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
@@ -134,13 +95,13 @@ while :; do
     fi
 done
 
-LAST_PORT=$(($FIRST_PORT + 5000))
+LAST_PORT=$(($FIRST_PORT + 3000))
 echo "LAST_PORT là $LAST_PORT. Tiếp tục..."
 
-gen_data > ${WORKDIR}/data.txt
-gen_iptables > ${WORKDIR}/boot_iptables.sh
+gen_data > "${WORKDIR}/data.txt"
+gen_iptables > "${WORKDIR}/boot_iptables.sh"
 
-gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+gen_3proxy > "/usr/local/etc/3proxy/3proxy.cfg"
 
 cat >> /etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
