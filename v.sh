@@ -81,6 +81,25 @@ EOF
 
 echo "Installing apps..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
+rotate_script="${WORKDIR}/rotate_proxies.sh"
+echo '#!/bin/bash' > "$rotate_script"
+echo 'new_ipv6=$(get_new_ipv6)' >> "$rotate_script"
+echo 'update_3proxy_config "$new_ipv6"' >> "$rotate_script"
+echo 'restart_3proxy' >> "$rotate_script"
+chmod +x "$rotate_script"
+
+# Add rotation to crontab for automatic rotation
+add_rotation_cronjob() {
+    echo "*/10 * * * * $rotate_script" >> /etc/crontab
+}
+
+echo "Installing necessary packages..."
+yum -y install wget gcc net-tools bsdtar zip >/dev/null
+
+cat << EOF > /etc/rc.d/rc.local
+#!/bin/bash
+touch /var/lock/subsys/local
+EOF
 
 install_3proxy
 
