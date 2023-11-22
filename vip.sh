@@ -1,18 +1,31 @@
 #!/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-random() {
-    tr </dev/urandom -dc A-Za-z0-9 | head -c5
-    echo
+# Constants
+CONFIG_FILE="/usr/local/etc/app_config.conf"
+PROXY_CONFIG_FILE="/usr/local/etc/3proxy/3proxy.cfg"
+WORKDIR="/home/cloudfly"
+
+# Functions
+apply_configuration_changes() {
+  echo "Applying configuration changes..."
+  # Example: systemctl restart your_service
+  sleep 2
 }
 
-array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+enable_ip_authentication() {
+  echo "Enabling IP Authentication..."
 
-gen64() {
-    ip64() {
-        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-    }
-    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+  read -p "Enter at least one IP address for authentication (use commas to separate multiple IPs): " ip_addresses
+
+  if [ -f "$CONFIG_FILE" ] && [ -n "$ip_addresses" ]; then
+    sed -i "s/IP_AUTHENTICATION=false/IP_AUTHENTICATION=true\nALLOWED_IPS=\"$ip_addresses\"/" "$CONFIG_FILE"
+    apply_configuration_changes
+    echo "IP Authentication enabled successfully for addresses: $ip_addresses."
+  else
+    echo "Error: Configuration file not found or no IP address provided."
+  fi
+
+  sleep 2
 }
 
 install_3proxy() {
@@ -23,17 +36,7 @@ install_3proxy() {
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd $WORKDIR
-}
-
-gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
-    done
-}
-
-gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
+    cd "$WORKDIR"
 }
 
 gen_3proxy() {
@@ -54,25 +57,51 @@ flush
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
 "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' ${WORKDATA})
+"flush\n"}' "${WORKDIR}/data.txt")
 EOF
 }
 
 gen_proxy_file_for_user() {
-    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA} > proxy.txt
+    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' "${WORKDIR}/data.txt" > "${WORKDIR}/proxy.txt"
 }
+
+gen_data() {
+    seq "$FIRST_PORT" "$LAST_PORT" | while read -r port; do
+        echo "//$IP4/$port/$(gen64 $IP6)"
+    done
+}
+
+gen_iptables() {
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDIR}/data.txt"
+}
+
+gen_ifconfig() {
+    awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' "${WORKDIR}/data.txt"
+}
+
+add_to_rc_local() {
+    cat <<EOF >> /etc/rc.local
+bash ${WORKDIR}/boot_iptables.sh
+bash ${WORKDIR}/boot_ifconfig.sh
+ulimit -n 10048
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+EOF
+}
+
+add_rotation_cronjob() {
+    echo "*/10 * * * * bash ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
+}
+
+echo "Installing apps..."
+yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 rotate_script="${WORKDIR}/rotate_proxies.sh"
 echo '#!/bin/bash' > "$rotate_script"
 echo 'new_ipv6=$(get_new_ipv6)' >> "$rotate_script"
 echo 'update_3proxy_config "$new_ipv6"' >> "$rotate_script"
-echo 'restart_3proxy' >> "$rotate_script"
-chmod +x "$rotate_script"
+echo 'restart_x "$rotate_script"
 
-# Add rotation to crontab for automatic rotation
-add_rotation_cronjob() {
-    echo "*/10 * * * * $rotate_script" >> /etc/crontab
-}
+add_rotation_cronjob
 
 echo "Installing necessary packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
@@ -84,28 +113,29 @@ EOF
 
 install_3proxy
 
-echo "Working directory set to /home/cloudfly"
+echo "Thư mục làm việc = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p $WORKDIR && cd $_  # Use -p to avoid errors if the directory already exists
+mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal IP = ${IP4}. External IPv6 subnet = ${IP6}"
+echo "IP nội bộ = ${IP4}. Subnet IPv6 ngoại trời = ${IP6}"
 
 while :; do
-    read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
-    if [[ ! $FIRST_PORT =~ ^[0-9]+$ || $FIRST_PORT -lt 10000 || $FIRST_PORT -gt 60000 ]]; then
-        echo "Invalid input. Enter a valid number between 10000 and 60000."
-    else
-        echo "OK! Valid number"
+    read -p "Nhập FIRST_PORT từ 10000 đến 60000: " FIRST_PORT
+    [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Nhập một số hợp lệ"; continue; }
+    if ((FIRST_PORT >= 10000 && FIRST_PORT <= 60000)); then
+        echo "OK! Số hợp lệ"
         break
+    else
+        echo "Số nằm ngoài phạm vi, hãy thử lại"
     fi
 done
 
 LAST_PORT=$(($FIRST_PORT + 5000))
-echo "LAST_PORT is $LAST_PORT. Continuing..."
+echo "LAST_PORT là $LAST_PORT. Tiếp tục..."
 
 gen_data > ${WORKDIR}/data.txt
 gen_iptables > ${WORKDIR}/boot_iptables.sh
@@ -121,6 +151,51 @@ EOF
 chmod 0755 /etc/rc.local
 bash /etc/rc.local
 
+gen_proxy_file_for_user
+rm -rf /root/3proxy-3proxy-0.8.6
+echo "Starting Proxy"
+
+# Adjusted menu
+show_menu() {
+    clear
+    echo "Menu:"
+    echo "1. Tạo proxy và cập nhật"
+    echo "2. Xoay proxy tự động"
+    echo "3. Hiển thị danh sách proxy"
+    echo "4. Tải về danh sách proxy"
+    echo "5. Thoát"
+}
+
+while true; do
+    show_menu
+    read -p "Chọn một tùy chọn (1-5): " choice
+
+    case $choice in
+        1)
+            gen_data >${WORKDIR}/data.txt
+            gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+            echo "Proxy được tạo và cập nhật vào danh sách."
+            ;;
+        2)
+            rotate_proxies &
+            echo "Đã bắt đầu xoay proxy tự động."
+            ;;
+        3)
+            cat proxy.txt
+            ;;
+        4)
+            download_proxy
+            ;;
+        5)
+            echo "Thoát..."
+            exit 0
+            ;;
+        *)
+            echo "Tùy chọn không hợp lệ. Vui lòng chọn từ 1 đến 5."
+            ;;    esac
+
+    sleep 2
+done
 enable_auto_rotate() {
   echo "Enabling Auto Rotation..."
 
@@ -188,45 +263,3 @@ restart_3proxy() {
     sleep 900  # Sleep for 15 minutes (900 seconds)
   done
 }
-# Adjusted menu for better readability
-show_menu() {
-    clear
-    echo "Menu:"
-    echo "1. Generate proxies and update configuration"
-    echo "2. Enable automatic proxy rotation"
-    echo "3. Show proxy list"
-    echo "4. Download proxy list"
-    echo "5. Exit"
-}
-
-while true; do
-    show_menu
-    read -p "Choose an option (1-5): " choice
-
-    case $choice in
-        1)
-            gen_data > ${WORKDIR}/data.txt
-            gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
-            echo "Proxies generated and configuration updated."
-            ;;
-        2)
-            add_rotation_cronjob
-            echo "Automatic proxy rotation enabled."
-            ;;
-        3)
-            cat proxy.txt
-            ;;
-        4)
-            download_proxy
-            ;;
-        5)
-            echo "Exiting..."
-            exit 0
-            ;;
-        *)
-            echo "Invalid option. Please choose from 1 to 5."
-            ;;
-    esac
-
-    sleep 2
-done
