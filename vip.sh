@@ -16,7 +16,7 @@ gen64() {
 }
 
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Installing 3proxy..."
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -33,9 +33,7 @@ gen_data() {
 }
 
 gen_iptables() {
-    cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
 }
 
 gen_3proxy() {
@@ -61,47 +59,22 @@ EOF
 }
 
 gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
-EOF
+    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA} > proxy.txt
 }
 
-xoay_ipv6() {
-    echo "Xoay IPv6 và đổi proxy..."
-    new_ipv6=$(get_new_ipv6)
-    update_3proxy_config "$new_ipv6"
-    restart_3proxy
-    echo "Proxy xoay thành công."
+rotate_script="${WORKDIR}/rotate_proxies.sh"
+echo '#!/bin/bash' > "$rotate_script"
+echo 'new_ipv6=$(get_new_ipv6)' >> "$rotate_script"
+echo 'update_3proxy_config "$new_ipv6"' >> "$rotate_script"
+echo 'restart_3proxy' >> "$rotate_script"
+chmod +x "$rotate_script"
+
+# Add rotation to crontab for automatic rotation
+add_rotation_cronjob() {
+    echo "*/10 * * * * $rotate_script" >> /etc/crontab
 }
 
-get_new_ipv6() {
-    random_ipv6=$(openssl rand -hex 8 | sed 's/\(..\)/:\1/g; s/://1')
-    echo "$random_ipv6"
-}
-
-update_3proxy_config() {
-    new_ipv6=$1
-    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/3proxy.cfg
-}
-
-restart_3proxy() {
-    service 3proxy restart
-}
-
-enable_auto_rotate() {
-    echo "Bật xoay tự động..."
-
-    auto_rotate=true
-
-    while [ "$auto_rotate" = true ]; do
-        xoay_ipv6
-        sleep 600  # Nghỉ 10 phút
-    done
-
-    echo "Tắt xoay tự động."
-}
-
-echo "Cài đặt ứng dụng"
+echo "Installing necessary packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 cat << EOF > /etc/rc.d/rc.local
@@ -111,36 +84,35 @@ EOF
 
 install_3proxy
 
-echo "Thư mục làm việc = /home/cloudfly"
+echo "Working directory set to /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir -p $WORKDIR && cd $_  # Use -p to avoid errors if the directory already exists
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "IP nội bộ = ${IP4}. Subnet IPv6 ngoại trời = ${IP6}"
+echo "Internal IP = ${IP4}. External IPv6 subnet = ${IP6}"
 
 while :; do
-    read -p "Nhập FIRST_PORT từ 10000 đến 60000: " FIRST_PORT
-    [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Nhập một số hợp lệ"; continue; }
-    if ((FIRST_PORT >= 10000 && FIRST_PORT <= 60000)); then
-        echo "OK! Số hợp lệ"
-        break
+    read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
+    if [[ ! $FIRST_PORT =~ ^[0-9]+$ || $FIRST_PORT -lt 10000 || $FIRST_PORT -gt 60000 ]]; then
+        echo "Invalid input. Enter a valid number between 10000 and 60000."
     else
-        echo "Số nằm ngoài phạm vi, hãy thử lại"
+        echo "OK! Valid number"
+        break
     fi
 done
 
 LAST_PORT=$(($FIRST_PORT + 5000))
-echo "LAST_PORT là $LAST_PORT. Tiếp tục..."
+echo "LAST_PORT is $LAST_PORT. Continuing..."
 
-gen_data >${WORKDIR}/data.txt
-gen_iptables >${WORKDIR}/boot_iptables.sh
+gen_data > ${WORKDIR}/data.txt
+gen_iptables > ${WORKDIR}/boot_iptables.sh
 
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
-cat >>/etc/rc.local <<EOF
+cat >> /etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
 ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
@@ -149,78 +121,110 @@ EOF
 chmod 0755 /etc/rc.local
 bash /etc/rc.local
 
-enable_auto_rotate
+enable_auto_rotate() {
+  echo "Enabling Auto Rotation..."
 
-show_proxy_list() {
-    echo "Proxy List:"
-    cat proxy.txt
+  auto_rotate=true
+
+  while [ "$auto_rotate" = true ]; do
+    rotate_proxies
+    sleep 600  # Sleep for 10 minutes
+  done
+
+  echo "Disabling Auto Rotation."
+}
+
+create_and_download_proxies() {
+  echo "Creating and Downloading Proxies..."
+
+  gen_data > "$PROXY_CONFIG_FILE"
+  download_proxy
+  echo "Proxies created and downloaded successfully."
+  sleep 2
 }
 
 download_proxy() {
-    echo "Downloading proxies..."
-    curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
-    echo "Proxies downloaded successfully."
+  echo "Downloading proxies..."
+  curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
+  echo "Proxies downloaded successfully."
+}
+
+show_proxy_list() {
+  echo "Proxy List:"
+  cat proxy.txt
+}
+
+download_proxy_list() {
+  echo "Downloading proxy list..."
+  curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
+  echo "Proxy list downloaded."
 }
 
 rotate_proxies() {
-    while true; do
-        sleep 600  # Sleep for 10 minutes
-        echo "Rotating proxies..."
-        gen_data >$WORKDIR/data.txt
-        gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-        echo "Proxies rotated."
-    done
+  echo "Rotating proxies..."
+  new_ipv6=$(get_new_ipv6)
+  update_3proxy_config "$new_ipv6"
+  restart_3proxy
+  echo "Proxies rotated successfully."
 }
 
-# Function to rotate and restart proxies
-rotate_and_restart() {
-    while true; do
-        for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
-            IPV6=$(head -n $i $WORKDIR/ipv6.txt | tail -n 1)
-            /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h$IP4 -e$IPV6 -p$i
-        done
-        /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
-        sleep 900  # Sleep for 15 minutes (900 seconds)
-    done
+get_new_ipv6() {
+  random_ipv6=$(openssl rand -hex 8 | sed 's/\(..\)/:\1/g; s/://1')
+  echo "$random_ipv6"
 }
 
-# Adjusted menu
+update_3proxy_config() {
+  new_ipv6=$1
+  sed -i "s/old_ipv6_address/$new_ipv6/" "$PROXY_CONFIG_FILE"
+}
+
+restart_3proxy() {
+  while true; do
+    for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
+      IPV6=$(head -n $i $WORKDIR/ipv6.txt | tail -n 1)
+      /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop
+      /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h$IP4 -e$IPV6 -p$i
+    done
+    sleep 900  # Sleep for 15 minutes (900 seconds)
+  done
+}
+# Adjusted menu for better readability
 show_menu() {
     clear
     echo "Menu:"
-    echo "1. Tạo proxy và cập nhật"
-    echo "2. Xoay proxy tự động"
-    echo "3. Hiển thị danh sách proxy"
-    echo "4. Tải về danh sách proxy"
-    echo "5. Thoát"
+    echo "1. Generate proxies and update configuration"
+    echo "2. Enable automatic proxy rotation"
+    echo "3. Show proxy list"
+    echo "4. Download proxy list"
+    echo "5. Exit"
 }
 
 while true; do
     show_menu
-    read -p "Chọn một tùy chọn (1-5): " choice
+    read -p "Choose an option (1-5): " choice
 
     case $choice in
         1)
-            gen_data >${WORKDIR}/data.txt
-            gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-            echo "Proxy được tạo và cập nhật vào danh sách."
+            gen_data > ${WORKDIR}/data.txt
+            gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+            echo "Proxies generated and configuration updated."
             ;;
         2)
-            rotate_proxies &
-            echo "Đã bắt đầu xoay proxy tự động."
+            add_rotation_cronjob
+            echo "Automatic proxy rotation enabled."
             ;;
         3)
-            show_proxy_list
+            cat proxy.txt
             ;;
         4)
             download_proxy
             ;;
         5)
-            echo "Thoát..."
+            echo "Exiting..."
             exit 0
             ;;
         *)
-            echo "Tùy chọn không hợp lệ. Vui lòng chọn từ 1 đến 5."
+            echo "Invalid option. Please choose from 1 to 5."
             ;;
     esac
 
