@@ -7,9 +7,8 @@ rotate_ipv6() {
     echo "Xoay địa chỉ IPv6..."
     new_ipv6=$(get_new_ipv6)
     update_3proxy_config "$new_ipv6"
-    service 3proxy restart
-    echo "3proxy khởi động lại thành công."
-    echo "Xoay IPv6 hoàn tất."
+    restart_3proxy
+    echo "Proxies rotated successfully."
 }
 
 get_new_ipv6() {
@@ -17,19 +16,21 @@ get_new_ipv6() {
     echo "$random_ipv6"
 }
 
-rotate_ipv6() {
-    echo "Rotating IPv6 addresses..."
-    new_ipv6=$(get_new_ipv6)
-    update_3proxy_config "$new_ipv6"
-    service 3proxy restart
-    echo "3proxy restarted successfully."
-    echo "IPv6 rotation completed."
-}
-
 update_3proxy_config() {
     new_ipv6=$1
     sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/3proxy.cfg
 }
+
+restart_3proxy() {
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sreload
+}
+
+cat <<EOF
+#!/bin/bash
+WORKDIR="/home/cloudfly"  # Thay đổi với thư mục làm việc thực tế của bạn
+IP4=\$(curl -4 -s icanhazip.com)
+restart_3proxy
+EOF
 
 add_rotation_cronjob() {
     echo "*/10 * * * * root ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
