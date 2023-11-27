@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKDIR="/home/proxy"
+WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 
 rotate_ipv6() {
@@ -26,6 +26,8 @@ add_rotation_cronjob() {
     echo "*/10 * * * * root ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
     echo "Đã thêm cronjob cho xoay IPv6 mỗi 10 phút."
 }
+# Tự động xoay proxy sau mỗi 10 phút
+(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_proxies.sh") | crontab -
 
 display_proxy_list() {
     echo "Hiển thị danh sách proxy:"
