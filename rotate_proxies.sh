@@ -8,6 +8,7 @@ rotate_ipv6() {
     new_ipv6=$(get_new_ipv6)
     update_3proxy_config "$new_ipv6"
     restart_3proxy
+    add_rotation_cronjob
     echo "Proxies rotated successfully."
 }
 
@@ -18,27 +19,20 @@ get_new_ipv6() {
 
 update_3proxy_config() {
     new_ipv6=$1
-    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/3proxy.cfg
+    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 }
 
 restart_3proxy() {
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+    systemctl restart 3proxy
 }
 
-cat <<EOF > "${WORKDIR}/rotate_3proxy.sh"
-#!/bin/bash
-WORKDIR="/home/cloudfly"
-rotate_ipv6
-EOF
-chmod +x "${WORKDIR}/rotate_3proxy.sh"
-
 add_rotation_cronjob() {
-    echo "*/10 * * * * root ${WORKDIR}/rotate_3proxy.sh" >> /etc/crontab
+    echo "*/10 * * * * root ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
     echo "Cronjob added for IPv6 rotation every 10 minutes."
 }
 
 # Tự động xoay proxy sau mỗi 10 phút
-add_rotation_cronjob
+(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
 display_proxy_list() {
     echo "Hiển thị danh sách proxy:"
