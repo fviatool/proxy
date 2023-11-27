@@ -17,17 +17,27 @@ get_new_ipv6() {
     echo "$random_ipv6"
 }
 
+rotate_ipv6() {
+    echo "Rotating IPv6 addresses..."
+    new_ipv6=$(get_new_ipv6)
+    update_3proxy_config "$new_ipv6"
+    service 3proxy restart
+    echo "3proxy restarted successfully."
+    echo "IPv6 rotation completed."
+}
+
 update_3proxy_config() {
     new_ipv6=$1
-    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/bin/3proxy/3proxy.cfg
+    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/3proxy.cfg
 }
 
 add_rotation_cronjob() {
     echo "*/10 * * * * root ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
-    echo "Đã thêm cronjob cho xoay IPv6 mỗi 10 phút."
+    echo "Cronjob added for IPv6 rotation every 10 minutes."
 }
+
 # Tự động xoay proxy sau mỗi 10 phút
-(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_proxies.sh") | crontab -
+(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
 display_proxy_list() {
     echo "Hiển thị danh sách proxy:"
