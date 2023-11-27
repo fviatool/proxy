@@ -22,23 +22,23 @@ update_3proxy_config() {
 }
 
 restart_3proxy() {
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sreload
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 }
 
-cat <<EOF
+cat <<EOF > "${WORKDIR}/rotate_3proxy.sh"
 #!/bin/bash
-WORKDIR="/home/cloudfly"  # Thay đổi với thư mục làm việc thực tế của bạn
-IP4=\$(curl -4 -s icanhazip.com)
-restart_3proxy
+WORKDIR="/home/cloudfly"
+rotate_ipv6
 EOF
+chmod +x "${WORKDIR}/rotate_3proxy.sh"
 
 add_rotation_cronjob() {
-    echo "*/10 * * * * root ${WORKDIR}/rotate_proxies.sh" >> /etc/crontab
+    echo "*/10 * * * * root ${WORKDIR}/rotate_3proxy.sh" >> /etc/crontab
     echo "Cronjob added for IPv6 rotation every 10 minutes."
 }
 
 # Tự động xoay proxy sau mỗi 10 phút
-(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
+add_rotation_cronjob
 
 display_proxy_list() {
     echo "Hiển thị danh sách proxy:"
