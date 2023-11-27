@@ -19,7 +19,7 @@ get_new_ipv6() {
 
 update_3proxy_config() {
     new_ipv6=$1
-    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/3proxy.cfg
+    sed -i "s/old_ipv6_address/$new_ipv6/" /usr/local/etc/3proxy/bin/3proxy/3proxy.cfg
 }
 
 add_rotation_cronjob() {
