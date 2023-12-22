@@ -118,9 +118,9 @@ yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
+echo "working folder = /root/proxy"
+WORKDIR="/home/proxy"
+WORKDATA="${WORKDIR}/ipv6.txt"
 mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
@@ -141,7 +141,7 @@ done
 LAST_PORT=$(($FIRST_PORT + 10000))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
-gen_data >$WORKDIR/data.txt
+gen_data >$WORKDIR/ipv6.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x boot_*.sh /etc/rc.local
