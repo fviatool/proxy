@@ -138,7 +138,7 @@ while :; do
     echo "Number out of range, try again"
   fi
 done
-LAST_PORT=$(($FIRST_PORT + 10000))
+LAST_PORT=$(($FIRST_PORT + 5000))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >$WORKDIR/ipv6.txt
