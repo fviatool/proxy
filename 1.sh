@@ -107,7 +107,7 @@ done
 LAST_PORT=$(($FIRST_PORT + 3333))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
-gen_data >$WORKDIR/ipv6.txt
+gen_data >$WORKDIR/proxy.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x boot_*.sh /etc/rc.local
