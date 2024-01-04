@@ -14,7 +14,7 @@ gen64() {
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Bắt đầu Tạo Proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -79,14 +79,14 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "installing apps"
+echo "Đang Cài Đặt"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
+WORKDATA="${WORKDIR}/ipv6.txt"
 mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
@@ -98,16 +98,16 @@ while :; do
   read -p "Enter FIRST_PORT between 10000 and 60000: " FIRST_PORT
   [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
   if ((FIRST_PORT >= 10000 && FIRST_PORT <= 60000)); then
-    echo "OK! Valid number"
+    echo "OK! Đợi Tí..."
     break
   else
-    echo "Number out of range, try again"
+    echo "Nhập Port Vào đi nào"
   fi
 done
-LAST_PORT=$(($FIRST_PORT + 5555))
+LAST_PORT=$(($FIRST_PORT + 10000))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
-gen_data >$WORKDIR/data.txt
+gen_data >$WORKDIR/ipv6.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x boot_*.sh /etc/rc.local
