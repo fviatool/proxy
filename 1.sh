@@ -13,6 +13,12 @@ gen64() {
 	}
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
+download_proxy() {
+    cd /home/cloudfly || exit 1
+    curl -F "file=@proxy.txt" https://transfer.sh
+}
+
 install_3proxy() {
     echo "Bắt đầu Tạo Proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -127,3 +133,5 @@ gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
+
+download_proxy
