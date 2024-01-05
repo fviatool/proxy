@@ -14,6 +14,11 @@ gen64() {
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
+download_proxy() {
+    cd /home/cloudfly || exit 1
+    curl -F "file=@proxy.txt" https://transfer.sh
+}
+
 install_3proxy() {
     echo "Bắt đầu Tạo Proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -73,17 +78,6 @@ gen_ifconfig() {
     cat <<EOF
 $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
-}
-
-show_proxy_list() {
-    echo "Proxy List:"
-    cat proxy.txt
-}
-
-download_proxy() {
-    echo "Downloading proxies..."
-    curl -F "$PROXY_CONFIG_FILE" https://transfer.sh > proxy.txt
-    echo "Proxies downloaded successfully."
 }
 
 cat << EOF > /etc/rc.d/rc.local
