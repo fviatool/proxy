@@ -61,10 +61,9 @@ $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
-
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "$IP4:$port $(gen64 $IP6)"
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
