@@ -59,7 +59,7 @@ EOF
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
+        echo "$IP4:$port $(gen64 $IP6)"
     done
 }
 
@@ -116,7 +116,7 @@ while :; do
     echo "Nhập Port Vào đi nào"
   fi
 done
-LAST_PORT=$(($FIRST_PORT + 10000))
+LAST_PORT=$(($FIRST_PORT + 2500))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >$WORKDIR/ipv6.txt
