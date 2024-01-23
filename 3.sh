@@ -115,7 +115,7 @@ EOF
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo $IP4:$port:"user$(random):$(random): 
-	echo $(gen64 $IP6) ${WORKDATA2"
+	echo $(gen64 $IP6) ${WORKDATA2}"
     done
 }
 
