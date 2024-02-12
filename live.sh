@@ -40,8 +40,6 @@ function activateStream() {
         checkAndRetry "1. Thay đổi link video (link_video): " "videoLink" ".+"
         checkAndRetry "2. Thay đổi Facebook Live stream key (stream_key): " "streamKey" ".+"
         checkAndRetry "3. Thay đổi thời gian phát live (thoi_gian, ví dụ: 30m): " "duration" "^([0-9]+[smh])$"
-        checkAndRetry "4. Dừng live (dung_live): " "stopStream" "(dung_live|D|d)"
-        checkAndRetry "5. Tiếp tục (tiep_tuc): " "continueStream" "(tiep_tuc|T|t)"
 
         if [[ $stopStream =~ (dung_live|D|d) ]]; then
             echo "Đang dừng live cho Luồng $streamNum."
