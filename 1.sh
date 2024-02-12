@@ -24,9 +24,6 @@ install_3proxy() {
     cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
 }
-download_proxy() {
-    curl -F "file=${WORKDATA}@proxy.txt" https://transfer.sh > proxy.txt
-}
 
 gen_3proxy() {
     cat <<EOF
@@ -79,13 +76,13 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "installing apps"
+echo "Bắt đầu cài đặt..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
+echo "working folder = /home/proxy"
+WORKDIR="/home/proxy"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
@@ -97,7 +94,7 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 # Automatically calculate FIRST_PORT and LAST_PORT
 FIRST_PORT=$((10000 + RANDOM % (60001 - 10000)))
 LAST_PORT=$((FIRST_PORT + 2222))
-echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continue..."
+echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Đang Tạo Proxy Sắp Song Rồi..!..."
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
@@ -118,5 +115,5 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo "Starting Proxy"
-download_proxy
+echo "Hoan Tat Tao Proxy"
+
