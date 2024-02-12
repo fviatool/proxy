@@ -1,5 +1,4 @@
-#!/bin/sh
-
+#!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -14,6 +13,16 @@ gen64() {
     }
     echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
+auth_ip() {
+    echo "auth none"
+    port=$START_PORT
+    while read ip; do
+        echo "proxy -6 -n -a -p$port -i$IP4 -e$ip"
+        ((port+=1))
+    done < $WORKDIR/ipv6.txt
+}
+
 install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -22,7 +31,11 @@ install_3proxy() {
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd $WORKDIR
+    cd $WORKDIR || exit 1
+}
+download_proxy() {
+    cd /home/cloudfly || exit 1
+    curl -F "file=@proxy.txt" https://transfer.sh
 }
 
 gen_3proxy() {
@@ -42,7 +55,7 @@ flush
 
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
-"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
+"$(auth_ip)\n" \
 "flush\n"}' ${WORKDATA})
 EOF
 }
@@ -61,7 +74,7 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
@@ -71,10 +84,21 @@ $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
-cat << EOF > /etc/rc.d/rc.local
+rotate_proxy_script() {
+    cat <<EOF
 #!/bin/bash
-touch /var/lock/subsys/local
+WORKDIR="/home/cloudfly"  # Update with your actual working directory
+IP4=\$(curl -4 -s icanhazip.com)
+for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
+    IPV6=\$(head -n \$i \$WORKDIR/ipv6.txt | tail -n 1)
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h\$IP4 -e\$IPV6 -p\$i
+done
 EOF
+}
+
+# Automatically rotate proxy every 10 minutes
+(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
 echo "Bắt đầu cài đặt..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
