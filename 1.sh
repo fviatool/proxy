@@ -34,7 +34,7 @@ install_3proxy() {
     cd $WORKDIR || exit 1
 }
 download_proxy() {
-    cd /home/cloudfly || exit 1
+    cd /root || exit 1
     curl -F "file=@proxy.txt" https://transfer.sh
 }
 
@@ -83,22 +83,6 @@ gen_ifconfig() {
 $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
-
-rotate_proxy_script() {
-    cat <<EOF
-#!/bin/bash
-WORKDIR="/home/cloudfly"  # Update with your actual working directory
-IP4=\$(curl -4 -s icanhazip.com)
-for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
-    IPV6=\$(head -n \$i \$WORKDIR/ipv6.txt | tail -n 1)
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h\$IP4 -e\$IPV6 -p\$i
-done
-EOF
-}
-
-# Automatically rotate proxy every 10 minutes
-(crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
 echo "Bat Dau Tao Proxy..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
