@@ -100,7 +100,7 @@ EOF
 # Automatically rotate proxy every 10 minutes
 (crontab -l ; echo "*/10 * * * * ${WORKDIR}/rotate_3proxy.sh") | crontab -
 
-echo "Bắt đầu cài đặt..."
+echo "Bat Dau Tao Proxy..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
@@ -118,7 +118,7 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 # Automatically calculate FIRST_PORT and LAST_PORT
 FIRST_PORT=$((10000 + RANDOM % (60001 - 10000)))
 LAST_PORT=$((FIRST_PORT + 22222))
-echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Đang Tạo Proxy Sắp Song Rồi..!..."
+echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Load Port Tao Proxy..!..."
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
