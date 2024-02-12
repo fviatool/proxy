@@ -25,8 +25,7 @@ install_3proxy() {
     cd $WORKDIR
 }
 download_proxy() {
-    cd /home/cloudfly || exit 1
-    curl -F "file=@proxy.txt" https://transfer.sh
+    curl -F "file=@proxy.txt" https://transfer.sh > proxy.txt
 }
 
 gen_3proxy() {
