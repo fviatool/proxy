@@ -141,3 +141,4 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Hoan Tat Tao Proxy"
 
+sudo ifconfig eth0 up
