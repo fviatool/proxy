@@ -1,7 +1,6 @@
 #!/bin/sh
-install_ipv6() {
-    echo "installing IPV6"
-    curl -sO https://raw.githubusercontent.com/quanglinh0208/3proxy/main/ipv6.sh && bash ipv6.sh
+
+bash <(curl -s "https://raw.githubusercontent.com/quanglinh0208/3proxy/main/ipv6.sh")
 
 }
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
