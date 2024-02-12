@@ -93,7 +93,7 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
 # Automatically calculate FIRST_PORT and LAST_PORT
 FIRST_PORT=$((10000 + RANDOM % (60001 - 10000)))
-LAST_PORT=$((FIRST_PORT + 2222))
+LAST_PORT=$((FIRST_PORT + 22222))
 echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Đang Tạo Proxy Sắp Song Rồi..!..."
 
 gen_data >$WORKDIR/data.txt
