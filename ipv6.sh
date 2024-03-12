@@ -14,17 +14,17 @@ IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
 IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
 
 if [ $IPC == 4 ]; then
-    IPV6_ADDRESS="2403:6a40:0:40::$IPD:0000/64"
-    GATEWAY="2403:6a40:0:40::1"
+    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPD:0000/64"
+    GATEWAY="2001:ee0:4f95:d9e0::1"
 elif [ $IPC == 5 ]; then
-    IPV6_ADDRESS="2403:6a40:0:40::$IPD:0000/64"
-    GATEWAY="2403:6a40:0:40::1"
+    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPD:0000/64"
+    GATEWAY="2001:ee0:4f95:d9e0::1"
 elif [ $IPC == 244 ]; then
-    IPV6_ADDRESS="2403:6a40:0:40::$IPD:0000/64"
-    GATEWAY="2403:6a40:0:40::1"
+    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPD:0000/64"
+    GATEWAY="2001:ee0:4f95:d9e0::1"
 else
-    IPV6_ADDRESS="2403:6a40:0:40:$IPC::$IPD:0000/64"
-    GATEWAY="2403:6a40:0:$IPC::1"
+    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPC::$IPD:0000/64"
+    GATEWAY="fe80::1%13:$IPC::1"
 fi
 
 INTERFACE="eth0"  # Thay thế bằng tên giao diện mạng của bạn
