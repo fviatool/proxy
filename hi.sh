@@ -2,7 +2,7 @@
 
 install_ipv6() {
     echo "installing IPV6"
-    curl -sO https://raw.githubusercontent.com/quanglinh0208/3proxy/main/ipv6.sh && bash ipv6.sh
+    curl -sO https://raw.githubusercontent.com/fviatool/proxy/main/ipv6.sh && bash ipv6.sh
 }
 
 # Find the active network interface
