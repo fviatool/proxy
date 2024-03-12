@@ -746,7 +746,7 @@ echo "
 +----------------------------------------------------------------------
 | Copyright © 2015-2099 BT-SOFT(http://www.aapanel.com) All rights reserved.
 +----------------------------------------------------------------------
-| The WebPanel URL will be http://SERVER_IP:8888 when installed.
+| The WebPanel URL will be http://SERVER_IP:6789 when installed.
 +----------------------------------------------------------------------
 "
 
@@ -775,7 +775,7 @@ echo -e "username: $username"
 echo -e "password: $password"
 echo -e "\033[33mWarning:\033[0m"
 echo -e "\033[33mIf you cannot access the panel, \033[0m"
-echo -e "\033[33mrelease the following port (8888|888|80|443|20|21) in the security group\033[0m"
+echo -e "\033[33mrelease the following port (6789|888|80|443|20|21) in the security group\033[0m"
 echo -e "=================================================================="
 
 endTime=`date +%s`
