@@ -1,11 +1,5 @@
 #!/bin/bash
 
-install_ipv6() {
-    echo "installing IPV6"
-    curl -sO https://raw.githubusercontent.com/fviatool/proxy/main/ipv6.sh && bash ipv6.sh
-}
-
-# Find the active network interface
 NETWORK_INTERFACE=$(ip route get 1 | awk 'NR==1 {print $(NF-2); exit}')
 echo "Detected network interface: $NETWORK_INTERFACE"
 
