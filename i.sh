@@ -1,5 +1,12 @@
+
 #!/bin/bash
 
+# Kiểm tra xem có công cụ quản lý gói `yum` được cài đặt hay không
+YUM=$(which yum)
+
+# Nếu có yum
+if [ "$YUM" ]; then
+    # Xóa nội dung hiện tại của tệp /etc/sysctl.conf và thêm cấu hình IPv6 mới để kích hoạt IPv6
     echo > /etc/sysctl.conf
     tee -a /etc/sysctl.conf <<EOF
 net.ipv6.conf.default.disable_ipv6 = 0
