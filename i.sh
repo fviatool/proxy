@@ -1,35 +1,42 @@
 #!/bin/bash
+
+# Kiểm tra xem có công cụ quản lý gói `yum` được cài đặt hay không
 YUM=$(which yum)
-#####
+
+# Nếu có yum
 if [ "$YUM" ]; then
-echo > /etc/sysctl.conf
-##
-tee -a /etc/sysctl.conf <<EOF
+    # Xóa nội dung hiện tại của tệp /etc/sysctl.conf và thêm cấu hình IPv6 mới để kích hoạt IPv6
+    echo > /etc/sysctl.conf
+    tee -a /etc/sysctl.conf <<EOF
 net.ipv6.conf.default.disable_ipv6 = 0
 net.ipv6.conf.all.disable_ipv6 = 0
 EOF
-##
-sysctl -p
-IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
-IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
+    # Áp dụng cấu hình
+    sysctl -p
 
-if [ $IPC == 4 ]; then
-    IPV6_ADDRESS="2402:800:6234:a0af::$IPD:0000/64"
-    GATEWAY="2402:800:6234:a0af::1"
-elif [ $IPC == 5 ]; then
-    IPV6_ADDRESS="2402:800:6234:a0af::$IPD:0000/64"
-    GATEWAY="2402:800:6234:a0af::1"
-elif [ $IPC == 244 ]; then
-    IPV6_ADDRESS="2402:800:6234:a0af::$IPD:0000/64"
-    GATEWAY="2402:800:6234:a0af::1"
-else
-    IPV6_ADDRESS="2402:800:6234:a0af::$IPC::$IPD:0000/64"
-    GATEWAY="fe80::1%13:$IPC::1"
-fi
+    # Lấy phần thứ 3 và thứ 4 của địa chỉ IPv4 để tạo địa chỉ IPv6
+    IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
+    IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
 
-INTERFACE="eth0"  # Thay thế bằng tên giao diện mạng của bạn
+    # Định nghĩa địa chỉ IPv6 dựa trên phần thứ 3 của địa chỉ IPv4
+    if [ $IPC == 4 ]; then
+        IPV6_ADDRESS="2402:800:6234:a0af::$IPD:0000/64"
+        GATEWAY="2402:800:6234:a0af::1"
+    elif [ $IPC == 5 ]; then
+        IPV6_ADDRESS="2402:800:6234:a0af::$IPD:0000/64"
+        GATEWAY="2402:800:6234:a0af::1"
+    elif [ $IPC == 244 ]; then
+        IPV6_ADDRESS="2402:800:6234:a0af::$IPD:0000/64"
+        GATEWAY="2402:800:6234:a0af::1"
+    else
+        IPV6_ADDRESS="2402:800:6234:a0af::$IPC::$IPD:0000/64"
+        GATEWAY="fe80::1%13:$IPC::1"
+    fi
 
-cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-$INTERFACE
+    INTERFACE="eth0"  # Thay thế bằng tên giao diện mạng của bạn
+
+    # Tạo tệp cấu hình cho giao diện mạng
+    cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-$INTERFACE
 IPV6INIT=yes
 IPV6_AUTOCONF=no
 IPV6_DEFROUTE=yes
@@ -39,6 +46,9 @@ IPV6ADDR=$IPV6_ADDRESS
 IPV6_DEFAULTGW=$GATEWAY
 EOF
 
-service network restart
+    # Khởi động lại dịch vụ mạng để áp dụng cấu hình mới
+    service network restart
 
-echo 'Đã tạo IPv6 thành công!'
+    # In ra thông báo sau khi đã tạo thành công địa chỉ IPv6
+    echo 'Đã tạo IPv6 thành công!'
+fi
