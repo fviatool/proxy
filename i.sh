@@ -1,20 +1,13 @@
 
-#!/bin/bash
-
-# Kiểm tra xem có công cụ quản lý gói `yum` được cài đặt hay không
-YUM=$(which yum)
-
-# Nếu có yum
-if [ "$YUM" ]; then
-    # Xóa nội dung hiện tại của tệp /etc/sysctl.conf và thêm cấu hình IPv6 mới để kích hoạt IPv6
-    echo > /etc/sysctl.conf
-    tee -a /etc/sysctl.conf <<EOF
+#!/bin/sh
+echo > /etc/sysctl.conf
+##
+tee -a /etc/sysctl.conf <<EOF
 net.ipv6.conf.default.disable_ipv6 = 0
 net.ipv6.conf.all.disable_ipv6 = 0
 EOF
-    # Áp dụng cấu hình
-    sysctl -p
-
+##
+sysctl -p
     # Lấy phần thứ 3 và thứ 4 của địa chỉ IPv4 để tạo địa chỉ IPv6
     IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
     IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
@@ -53,3 +46,5 @@ EOF
     # In ra thông báo sau khi đã tạo thành công địa chỉ IPv6
     echo 'Đã tạo IPv6 thành công!'
 fi
+
+rm -rf i.sh
