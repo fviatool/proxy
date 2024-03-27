@@ -1,44 +1,54 @@
 #!/bin/bash
-YUM=$(which yum)
-#####
-if [ "$YUM" ]; then
-echo > /etc/sysctl.conf
-##
-tee -a /etc/sysctl.conf <<EOF
-net.ipv6.conf.default.disable_ipv6 = 0
-net.ipv6.conf.all.disable_ipv6 = 0
-EOF
-##
-sysctl -p
-IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
-IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
 
-if [ $IPC == 4 ]; then
-    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPD:0000/64"
-    GATEWAY="2001:ee0:4f95:d9e0::1"
-elif [ $IPC == 5 ]; then
-    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPD:0000/64"
-    GATEWAY="2001:ee0:4f95:d9e0::1"
-elif [ $IPC == 244 ]; then
-    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPD:0000/64"
-    GATEWAY="2001:ee0:4f95:d9e0::1"
+# Get IPv6 address
+ipv6_address=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
+
+# Check if IPv6 address is obtained
+if [ -n "$ipv6_address" ]; then
+    echo "IPv6 address obtained: $ipv6_address"
+
+    # Declare associative arrays to store IPv6 addresses and gateways
+    declare -A ipv6_addresses=(
+        [4]="2001:ee0:4f9b::$IPD:0000/64"
+        [5]="2001:ee0:4f9b::$IPD:0000/64"
+        [244]="2001:ee0:4f9b::$IPD:0000/64"
+        ["default"]="2001:ee0:4f9b::$IPC::$IPD:0000/64"
+    )
+
+    declare -A gateways=(
+        [4]="fe80::1%13:$IPC::1"
+        [5]="fe80::1%13:$IPC::1"
+        [244]="fe80::1%13:$IPC::1"
+        ["default"]="fe80::1%13:$IPC::1"
+    )
+
+    # Get IPv4 third and fourth octets
+    IPC=$(echo "$ipv6_address" | cut -d":" -f5)
+    IPD=$(echo "$ipv6_address" | cut -d":" -f6)
+
+    # Set IPv6 address and gateway based on IPv4 third octet
+    IPV6_ADDRESS="${ipv6_addresses[$IPC]}"
+    GATEWAY="${gateways[$IPC]}"
+
+    # Check if interface is available
+    INTERFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -n1)
+
+    if [ -n "$INTERFACE" ]; then
+        echo "Configuring interface: $INTERFACE"
+
+        # Configure IPv6 settings
+        echo "IPV6_ADDR_GEN_MODE=stable-privacy" >> /etc/network/interfaces
+        echo "IPV6ADDR=$ipv6_address/64" >> /etc/network/interfaces
+        echo "IPV6_DEFAULTGW=$GATEWAY" >> /etc/network/interfaces
+
+        # Restart networking service
+        service networking restart
+        systemctl restart NetworkManager.service
+        ifconfig "$INTERFACE"
+        echo "Done!"
+    else
+        echo "No network interface available."
+    fi
 else
-    IPV6_ADDRESS="2001:ee0:4f95:d9e0::$IPC::$IPD:0000/64"
-    GATEWAY="fe80::1%13:$IPC::1"
+    echo "No IPv6 address obtained."
 fi
-
-INTERFACE="eth0"  # Thay thế bằng tên giao diện mạng của bạn
-
-cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-$INTERFACE
-IPV6INIT=yes
-IPV6_AUTOCONF=no
-IPV6_DEFROUTE=yes
-IPV6_FAILURE_FATAL=no
-IPV6_ADDR_GEN_MODE=stable-privacy
-IPV6ADDR=$IPV6_ADDRESS
-IPV6_DEFAULTGW=$GATEWAY
-EOF
-
-service network restart
-
-echo 'Đã tạo IPv6 thành công!'
