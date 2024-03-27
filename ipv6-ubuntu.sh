@@ -1,49 +1,53 @@
 #!/bin/bash
-ipv4=$(curl -4 -s icanhazip.com)
-IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
-IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
-INT=$(ls /sys/class/net | grep e)
-if [ "$IPC" = "4" ]; then
-	IPV6_ADDRESS="2403:6a40:0:40::$IPD:0000/64"
-	PREFIX_LENGTH="64"
-	INTERFACE="$INT"
-	GATEWAY="2403:6a40:0:40::1"
-elif [ "$IPC" = "5" ]; then
-	IPV6_ADDRESS="2403:6a40:0:41::$IPD:0000/64"
-	PREFIX_LENGTH="64"
-	INTERFACE="$INT"
-	GATEWAY="2403:6a40:0:41::1"
-elif [ "$IPC" = "244" ]; then
-	IPV6_ADDRESS="2403:6a40:2000:244::$IPD:0000/64"
-	PREFIX_LENGTH="64"
-	INTERFACE="$INT"
-	GATEWAY="2403:6a40:2000:244::1"
-else
-	IPV6_ADDRESS="2403:6a40:0:$IPC::$IPD:0000/64"
-	PREFIX_LENGTH="64"
-	INTERFACE="$INT"
-	GATEWAY="2403:6a40:0:$IPC::1"
+
+# Lấy tên giao diện mạng
+interface_name=$(ip -o link show | awk -F': ' '{print $2}')
+
+# Lấy địa chỉ IPv6 của giao diện mạng đầu tiên
+ipv6_address=$(ip -6 addr show dev "$interface_name" | grep inet6 | awk '{print $2}' | head -n1)
+
+# Kiểm tra xem có địa chỉ IPv6 nào được tìm thấy không
+if [ -z "$ipv6_address" ]; then
+    echo "Không tìm thấy địa chỉ IPv6 trên giao diện $interface_name"
+    exit 1
 fi
-interface_name="$INTERFACE"  # Thay thế bằng tên giao diện mạng của bạn
-ipv6_address="$IPV6_ADDRESS"
-gateway6_address="$GATEWAY"
-if [ "$INT" = "ens160" ]; then
-	netplan_path="/etc/netplan/99-netcfg-vmware.yaml"  # Thay thế bằng đường dẫn tệp cấu hình Netplan của bạn
-	netplan_config=$(cat "$netplan_path")
-	new_netplan_config=$(sed "/gateway4:/i \ \ \ \ \ \ \  - $ipv6_address" <<< "$netplan_config")
-	new_netplan_config=$(sed "/gateway4:.*/a \ \ \ \ \  gateway6: $gateway6_address" <<< "$new_netplan_config")
-elif [ "$INT" = "eth0" ]; then
-	netplan_path="/etc/netplan/50-cloud-init.yaml"
-	netplan_config=$(cat "$netplan_path")
-	# Tạo đoạn cấu hình IPv6 mới
-	new_netplan_config=$(sed "/gateway4:/i \ \ \ \ \ \ \ \ \ \ \ \ - $ipv6_address" <<< "$netplan_config")
-	# cập nhật gateway ipv6
-	new_netplan_config=$(sed "/gateway4:.*/a \ \ \ \ \ \ \ \ \ \ \ \ gateway6: $gateway6_address" <<< "$new_netplan_config")
-else
-	echo 'Khong co card mang phu hop'
+
+# Lấy địa chỉ gateway IPv6 từ routing table
+gateway6_address=$(ip -6 route show | grep default | awk '{print $3}')
+
+# Kiểm tra xem có gateway IPv6 nào được tìm thấy không
+if [ -z "$gateway6_address" ]; then
+    echo "Không tìm thấy gateway IPv6"
+    exit 1
 fi
-    
-echo "$new_netplan_config" > "$netplan_path"
+
+# Đường dẫn đến tệp cấu hình Netplan
+netplan_path="/etc/netplan"
+
+# Kiểm tra và cập nhật cấu hình Netplan cho các phiên bản Ubuntu khác nhau
+if [ -d "$netplan_path" ]; then
+    if [ -f "$netplan_path/01-netcfg.yaml" ]; then
+        netplan_config="$netplan_path/01-netcfg.yaml"
+    elif [ -f "$netplan_path/50-cloud-init.yaml" ]; then
+        netplan_config="$netplan_path/50-cloud-init.yaml"
+    elif [ -f "$netplan_path/99-netcfg.yaml" ]; then
+        netplan_config="$netplan_path/99-netcfg.yaml"
+    else
+        echo "Không tìm thấy tệp cấu hình Netplan"
+        exit 1
+    fi
+else
+    echo "Thư mục $netplan_path không tồn tại"
+    exit 1
+fi
+
+# Tạo đoạn cấu hình IPv6 mới
+new_netplan_config=$(cat "$netplan_config")
+new_netplan_config+="\n      - $ipv6_address"
+new_netplan_config+="\n  gateway6: $gateway6_address"
+
+# Ghi đè cấu hình Netplan
+echo -e "$new_netplan_config" > "$netplan_config"
 
 # Áp dụng cấu hình Netplan
-sudo netplan apply
+netplan apply
