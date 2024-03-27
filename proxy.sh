@@ -1,3 +1,4 @@
+
 #!/bin/bash
 ###Script by Ngo Anh Tuan-lowendviet.com.
 
@@ -5,18 +6,18 @@
 #Update 2022-Oct-05: Initialize script
 
 # Final vars
-UPDATE_URL="https://file.lowendviet.com/Scripts/Linux/levip6/levip6"
+UPDATE_URL="https://raw.githubusercontent.com/fviatool/proxy/main/proxy.sh"
 BIN_DIR="/usr/local/bin/"
-BIN_EXEC="${BIN_DIR}levip6"
-WORKDIR="/etc/lev/"
+BIN_EXEC="${BIN_DIR}ipv6"
+WORKDIR="/etc/ipv6/"
 WORKDATA="${WORKDIR}/data.txt"
-LOGFILE="/var/log/levip6.log"
+LOGFILE="/var/log/ipv6.log"
 
 updateScript() {
   wget ${UPDATE_URL} -o $LOGFILE -nv -N -P $BIN_DIR && chmod 777 $BIN_EXEC
   if grep -q "URL:" "$LOGFILE"; then
     echo -e "Updated to latest version!"
-    echo -e "Hay chay lai phan mem bang lenh: \"levip6\"."
+    echo -e "Hay chay lai phan mem bang lenh: \"ipv6\"."
     exit 1
   else
     echo -e "No need to update!"
@@ -27,12 +28,11 @@ updateScript
 
 cat << "EOF"
 ==========================================================================
-  _                             _       _      _
- | |                           | |     (_)    | |
- | | _____      _____ _ __   __| __   ___  ___| |_   ___ ___  _ __ ___
- | |/ _ \ \ /\ / / _ | '_ \ / _` \ \ / | |/ _ | __| / __/ _ \| '_ ` _ \
- | | (_) \ V  V |  __| | | | (_| |\ V /| |  __| |_ | (_| (_) | | | | | |
- |_|\___/ \_/\_/ \___|_| |_|\__,_| \_/ |_|\___|\__(_\___\___/|_| |_| |_|
+    ____    _   _   ____      _      ____    _____    ____     _   _   _____ 
+ / ___|  | | | | |  _ \    / \    |  _ \  |_   _|  / ___|   | | | | |_   _|
+ \___ \  | | | | | | | |  / _ \   | |_) |   | |    \___ \   | |_| |   | |  
+  ___) | | |_| | | |_| | / ___ \  |  _ <    | |     ___) |  |  _  |   | |  
+ |____/   \___/  |____/ /_/   \_\ |_| \_\   |_|    |____/   |_| |_|   |_|  
 
         IPv6 All In One v1.0 by LowendViet.com Cloud VPS Server
 ==========================================================================
@@ -251,10 +251,15 @@ EOF
 }
 
 upload_proxy() {
-    cd $WORKDIR
-    local PASS=$(getRandomString)
-    zip --password $PASS lowendviet_proxy.zip proxy.txt > /dev/null
-    URL=$(curl -s -F "file=@lowendviet_proxy.zip" https://file.io | jq '.link')
+    cd "$WORKDIR" || exit 1
+
+    # Tạo tên tệp với ngày
+    file_name="proxy_$(date +"%Y%m%d").txt"
+
+    # Upload tệp proxy.txt
+    echo "Uploading $file_name file..."
+    URL=$(curl -s -F "file=@$file_name" https://transfer.sh | jq -r '.')
+
     echo "URL to download proxy: ${URL}"
     echo "Password zip file: ${PASS}"
 }
@@ -300,7 +305,7 @@ while [[ $selection -ne 10 ]] ; do
     prefix=$(subnetcalc $firstIPv6 | grep Network | cut -d "=" -f2 | cut -d "/" -f1 | awk '{$1=$1};1' | sed 's/:*$//g' )
   fi
   echo -e " "
-  echo -e "======== IPV6 SETTING BY LowendViet ========"
+  echo -e "======== IPV6 SETTING  ========"
   echo -e "    1. Enable/Disable IPv6"
   echo -e "    2. Danh sach IPv6 hien tai."
   echo -e "    3. Set IPv6 chinh."
