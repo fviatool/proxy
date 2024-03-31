@@ -1,32 +1,120 @@
 #!/bin/bash
-
-# Get interface name with default route
-interface_name=$(ip -6 route show default | awk '/dev/ {print $5}')
-
-# Check if interface name is obtained
-if [ -n "$interface_name" ]; then
-    echo "Interface name obtained: $interface_name"
-    
-    # Get IPv6 address
-    ipv6_address=$(ip addr show "$interface_name" | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
-
-    # Check if IPv6 address is obtained
-    if [ -n "$ipv6_address" ]; then
-        echo "IPv6 address obtained: $ipv6_address"
-        
-        # Configure IPv6 settings
-        echo "IPV6_ADDR_GEN_MODE=stable-privacy" >> /etc/network/interfaces
-        echo "IPV6ADDR=$ipv6_address/64" >> /etc/network/interfaces
-        echo "IPV6_DEFAULTGW=$(ip -6 route show default | awk '/via/{print $3}')" >> /etc/network/interfaces
-        
-        # Restart networking service
-        service networking restart
-        systemctl restart NetworkManager.service
-        ifconfig "$interface_name"
-        echo "Done!"
-    else
-        echo "Error: No IPv6 address obtained for interface $interface_name"
-    fi
+YUM=$(which yum)
+#####
+if [ "$YUM" ]; then
+echo > /etc/sysctl.conf
+##
+tee -a /etc/sysctl.conf <<EOF
+net.ipv6.conf.default.disable_ipv6 = 0
+net.ipv6.conf.all.disable_ipv6 = 0
+EOF
+##
+sysctl -p
+IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
+IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
+##
+if [ $IPC == 4 ]
+then
+   tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
+	IPV6INIT=yes
+	IPV6_AUTOCONF=no
+	IPV6_DEFROUTE=yes
+	IPV6_FAILURE_FATAL=no
+	IPV6_ADDR_GEN_MODE=stable-privacy
+	IPV6ADDR=2001:ee0:4f9b:92b0:a400::$IPD:0000/64
+	IPV6_DEFAULTGW=2001:ee0:4f9b:92b0::1
+	EOF
+elif [ $IPC == 5 ]
+then
+   tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
+	IPV6INIT=yes
+	IPV6_AUTOCONF=no
+	IPV6_DEFROUTE=yes
+	IPV6_FAILURE_FATAL=no
+	IPV6_ADDR_GEN_MODE=stable-privacy
+	IPV6ADDR=2403:6a40:0:41::$IPD:0000/64
+	IPV6_DEFAULTGW=2001:ee0:4f9b:92b0::1
+	EOF
+elif [ $IPC == 244 ]
+then
+   tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
+	IPV6INIT=yes
+	IPV6_AUTOCONF=no
+	IPV6_DEFROUTE=yes
+	IPV6_FAILURE_FATAL=no
+	IPV6_ADDR_GEN_MODE=stable-privacy
+	IPV6ADDR=2001:ee0:4f9b:92b0::$IPD:0000/64
+	IPV6_DEFAULTGW=2001:ee0:4f9b:92b0::1
+	EOF
 else
-    echo "Error: No interface name obtained with default route"
+	tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
+	IPV6INIT=yes
+	IPV6_AUTOCONF=no
+	IPV6_DEFROUTE=yes
+	IPV6_FAILURE_FATAL=no
+	IPV6_ADDR_GEN_MODE=stable-privacy
+	IPV6ADDR=2001:ee0:4f9b:92b0:$IPC::$IPD:0000/64
+	IPV6_DEFAULTGW=2001:ee0:4f9b:92b0:$IPC::1
+	EOF
 fi
+
+service network restart
+
+rm -rf ipv6.sh
+### Ubuntu  
+ else
+	ipv4=$(curl -4 -s icanhazip.com)
+	IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
+	IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
+	INT=$(ls /sys/class/net | grep e)
+	if [ "$IPC" = "4" ]; then
+		IPV6_ADDRESS="2001:ee0:4f9b:92b0::$IPD:0000/64"
+		PREFIX_LENGTH="64"
+		INTERFACE="$INT"
+		GATEWAY="2001:ee0:4f9b:92b0::1"
+	elif [ "$IPC" = "5" ]; then
+		IPV6_ADDRESS="2001:ee0:4f9b:92b0::$IPD:0000/64"
+		PREFIX_LENGTH="64"
+		INTERFACE="$INT"
+		GATEWAY="2001:ee0:4f9b:92b0::1"
+	elif [ "$IPC" = "244" ]; then
+		IPV6_ADDRESS="2001:ee0:4f9b:92b0::$IPD:0000/64"
+		PREFIX_LENGTH="64"
+		INTERFACE="$INT"
+		GATEWAY="2001:ee0:4f9b:92b0::1"
+	else
+		IPV6_ADDRESS="2001:ee0:4f9b:92b0:$IPC::$IPD:0000/64"
+		PREFIX_LENGTH="64"
+		INTERFACE="$INT"
+		GATEWAY="2001:ee0:4f9b:92b0:$IPC::1"
+	fi
+	interface_name="$INTERFACE"  # Thay thế bằng tên giao diện mạng của bạn
+	ipv6_address="$IPV6_ADDRESS"
+	gateway6_address="$GATEWAY"
+	# kiểm tra cấu hình card mạng
+	if [ "$INT" = "eth0" ]; then
+	   netplan_path="/etc/netplan/99-netcfg-vmware.yaml"  # Thay thế bằng đường dẫn tập tin cấu hình Netplan của bạn
+	   netplan_config=$(cat "$netplan_path")
+	   new_netplan_config=$(sed "/gateway4:/i \ \ \ \ \ \ \  - $ipv6_address" <<< "$netplan_config")
+	   new_netplan_config=$(sed "/gateway4:.*/a \ \ \ \ \  gateway6:$gateway6_address” <<< “$new_netplan_config”)
+elif [ “$INT” = “eth0” ]; then
+netplan_path=”/etc/netplan/50-cloud-init.yaml”
+netplan_config=$(cat “$netplan_path”)
+# Tạo đoạn cấu hình IPv6 mới
+new_netplan_config=$(sed “/gateway4:/i \ \ \ \ \ \ \ \ \ \ \ \ - $ipv6_address” <<< “$netplan_config”)
+# cập nhật gateway ipv6
+new_netplan_config=$(sed “/gateway4:.*/a \ \ \ \ \ \ \ \ \ \ \ \ gateway6: $gateway6_address” <<< “$new_netplan_config”)
+else
+echo ‘Không có card mạng phù hợp’
+fi
+# Tạo đoạn cấu hình IPv6 mới
+
+# cập nhật gateway ipv6
+
+echo "$new_netplan_config" > "$netplan_path"
+
+# Áp dụng cấu hình Netplan
+sudo netplan apply
+
+fi
+echo ‘Đã tạo IPV6 thành công!’
