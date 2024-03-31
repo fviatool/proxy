@@ -6,7 +6,7 @@
 #Update 2022-Oct-05: Initialize script
 
 # Final vars
-UPDATE_URL="https://file.lowendviet.com/Scripts/Linux/levip6/levip6"
+UPDATE_URL="https://raw.githubusercontent.com/fviatool/proxy/main/proxy.sh"
 BIN_DIR="/usr/local/bin/"
 BIN_EXEC="${BIN_DIR}levip6"
 WORKDIR="/etc/lev/"
