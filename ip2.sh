@@ -1,4 +1,23 @@
-#!/bin/sh
+#!/bin/sh#!/bin/bash
+
+ipv4=$(curl -4 -s icanhazip.com)
+IPC=$(echo "$ipv4" | cut -d"." -f3)
+IPD=$(echo "$ipv4" | cut -d"." -f4)
+INT=$(ls /sys/class/net | grep e)
+
+if [ "$IPC" = "4" ]; then
+    IPV6_ADDRESS="2001:ee0:4f9b::$IPD:0000/64"
+    GATEWAY="2001:ee0:4f9b:92b0::1"
+elif [ "$IPC" = "5" ]; then
+    IPV6_ADDRESS="2001:ee0:4f9b::$IPD:0000/64"
+    GATEWAY="2001:ee0:4f9b:92b0::1"
+elif [ "$IPC" = "244" ]; then
+    IPV6_ADDRESS="2001:ee0:4f9b::$IPD:0000/64"
+    GATEWAY="2001:ee0:4f9b:92b0::1"
+else
+    IPV6_ADDRESS="2001:ee0:0:$IPC::$IPD:0000/64"
+    GATEWAY="2001:ee0:0:$IPC::1"
+fi
 
 # Thêm cấu hình IPv6 mới vào tệp sysctl.conf
 cat <<EOF >> /etc/sysctl.conf
@@ -17,13 +36,10 @@ if [ $(curl -4 -s icanhazip.com) ]; then
 
     # Thêm cấu hình IPv6 vào tệp cấu hình của giao diện mạng
     echo "IPV6_FAILURE_FATAL=no
-    IPV6_ADDR_GEN_MODE=stable-privacy
-    IPV6ADDR=$IPV6ADDR/64
-    IPV6_DEFAULTGW=$IPV6_DEFAULTGW" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+IPV6_ADDR_GEN_MODE=stable-privacy
+IPV6ADDR=$IPV6ADDR/64
+IPV6_DEFAULTGW=$IPV6_DEFAULTGW" >> /etc/sysconfig/network-scripts/ifcfg-eth0
 
     # Khởi động lại dịch vụ mạng để áp dụng cấu hình mới
     service network restart
 fi
-
-# Xóa script sau khi thực thi xong
-rm -rf ip2.sh
