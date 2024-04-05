@@ -1,53 +1,56 @@
-#!/bin/sh
+#!/bin/bash
+ipv4=$(curl -4 -s icanhazip.com)
+IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
+IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
+INT=$(ls /sys/class/net | grep -E 'e(n)?s[0-9]+$')
 
-echo > /etc/sysctl.conf
-##
-tee -a /etc/sysctl.conf <<EOF
-net.ipv6.conf.default.disable_ipv6 = 0
-net.ipv6.conf.all.disable_ipv6 = 0
-EOF
-##
-
-sysctl -p
-
-ipv4Local="192.168.1.9"
-
-IPC=$(echo $ipv4Local | cut -d"." -f3)
-IPD=$(echo $ipv4Local | cut -d"." -f4)
-
-# Định nghĩa địa chỉ IPv6 dựa trên phần thứ 3 của địa chỉ IPv4
-if [ $IPC == 4 ]; then
-    IPV6_ADDRESS="2001:4860:4860::$IPD:0000/64"
-    GATEWAY="2402:800:6234:a0af::1"
-elif [ $IPC == 5 ]; then
-    IPV6_ADDRESS="2001:4860:4860::$IPD:0000/64"
-    GATEWAY="2402:800:6234:a0af::1"
-elif [ $IPC == 244 ]; then
-    IPV6_ADDRESS="2001:4860:4860::$IPD:0000/64"
-    GATEWAY="2402:800:6234:a0af::1"
+if [ "$IPC" = "4" ]; then
+	IPV6_ADDRESS="2001:ee0:4f9b::$IPD:0000/64"
+	PREFIX_LENGTH="64"
+	GATEWAY="2001:ee0:4f9b:92b0::1"
+elif [ "$IPC" = "5" ]; then
+	IPV6_ADDRESS="2001:ee0:4f9b::$IPD:0000/64"
+	PREFIX_LENGTH="64"
+	GATEWAY="2001:ee0:4f9b:92b0::1"
+elif [ "$IPC" = "244" ]; then
+	IPV6_ADDRESS="2001:ee0:4f9b::$IPD:0000/64"
+	PREFIX_LENGTH="64"
+	GATEWAY="2001:ee0:4f9b:92b0::1"
 else
-    IPV6_ADDRESS="2001:4860:4860::$IPC::$IPD:0000/64"
-    GATEWAY="2001:ee0:4f9b:92b0:$IPC::1"
+	IPV6_ADDRESS="2001:ee0:0:$IPC::$IPD:0000/64"
+	PREFIX_LENGTH="64"
+	GATEWAY="2001:ee0:0:$IPC::1"
 fi
 
-INTERFACE="eth0"  # Thay thế bằng tên giao diện mạng của bạn
+interface_name="$INT"  # Thay thế bằng tên giao diện mạng của bạn
+ipv6_address="$IPV6_ADDRESS"
+gateway6_address="$GATEWAY"
 
-# Tạo tệp cấu hình cho giao diện mạng
-cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
-IPV6INIT=yes
-IPV6_AUTOCONF=no
-IPV6_DEFROUTE=yes
-IPV6_FAILURE_FATAL=no
-IPV6_ADDR_GEN_MODE=stable-privacy
-IPV6ADDR=$IPV6_ADDRESS
-IPV6_DEFAULTGW=$GATEWAY
-EOF
+if [ -n "$INT" ]; then
+	netplan_path="/etc/netplan/"
+	if [ -f "$netplan_path/99-netcfg-vmware.yaml" ]; then
+		netplan_config="$netplan_path/99-netcfg-vmware.yaml"
+	elif [ -f "$netplan_path/50-cloud-init.yaml" ]; then
+		netplan_config="$netplan_path/50-cloud-init.yaml"
+	else
+		echo 'Không tìm thấy tệp cấu hình Netplan phù hợp'
+		exit 1
+	fi
 
-# Khởi động lại dịch vụ mạng để áp dụng cấu hình mới
-service network restart
+	# Đọc nội dung của tệp cấu hình Netplan
+	netplan_content=$(<"$netplan_config")
 
-# In ra thông báo sau khi đã tạo thành công địa chỉ IPv6
-echo 'Đã tạo IPv6 thành công!'
+	# Thêm địa chỉ IPv6 mới vào tệp cấu hình Netplan
+	new_netplan_content=$(sed "/gateway4:/i \ \ \ \ \ \ \  - $ipv6_address" <<< "$netplan_content")
 
-# Xóa script sau khi thực thi
-rm -rf i.sh
+	# Thêm địa chỉ Gateway IPv6 vào tệp cấu hình Netplan
+	new_netplan_content=$(sed "/gateway4:.*/a \ \ \ \ \  gateway6: $gateway6_address" <<< "$new_netplan_content")
+
+	# Ghi lại nội dung mới vào tệp cấu hình Netplan
+	echo "$new_netplan_content" > "$netplan_config"
+
+	# Áp dụng cấu hình Netplan
+	sudo netplan apply
+else
+	echo 'Không tìm thấy card mạng phù hợp'
+fi
