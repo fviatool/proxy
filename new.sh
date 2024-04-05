@@ -1,17 +1,20 @@
 #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
+# Gán địa chỉ IPv4 local
+ipv4Local="192.168.1.9"
+
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
 install_3proxy() {
@@ -54,7 +57,8 @@ EOF
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "user$port/$(random)/$IP4/$port/$(gen64 $IP6)"
+        echo "$(gen64 $IP6)" >> ${WORKDATA}ipv6.txt
+        echo "$IP4/$port:user$port:$(random)" >> ${WORKDATA}ipv4.txt
     done
 }
 
@@ -80,8 +84,12 @@ WORKDIR="/home/bkns"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
-IP4=$(curl -4 -s icanhazip.com)
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+# Lấy phần thứ 3 và thứ 4 của địa chỉ IPv4 để tạo địa chỉ IPv6
+IPC=$(echo $ipv4Local | cut -d"." -f3)
+IPD=$(echo $ipv4Local | cut -d"." -f4)
+
+# Gán giá trị cho biến $IP4
+IP4=$ipv4Local
 
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
