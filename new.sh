@@ -1,121 +1,220 @@
-#!/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+#!/bin/bash
 
-# Gán địa chỉ IPv4 local
-ipv4Local="192.168.1.9"
+# Kiểm tra xem mô-đun IPv6 đã được tải vào kernel hay chưa
+if ! lsmod | grep -q '^ipv6\s'; then
+    echo "Loading IPv6 module..."
+    modprobe ipv6
+    echo "IPv6 module loaded"
+else
+    echo "IPv6 module is already loaded"
+fi
 
-random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+# Thiết lập cấu hình mặc định cho IPv6
+sysctl -w net.ipv6.conf.all.disable_ipv6=0
+sysctl -w net.ipv6.conf.default.disable_ipv6=0
+
+# Hàm tạo địa chỉ IPv6 ngẫu nhiên
+random_ipv6() {
+    tr </dev/urandom -dc A-Fa-f0-9 | head -c 4 | sed -e 's/\(..\)/:\1/g'
 }
 
-array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
-gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+# Hàm cập nhật cấu hình 3proxy với IPv6 mới
+update_3proxy_config() {
+    local ipv6=$1
+    awk -F "/" -v ipv6="$ipv6" '{
+        print "\ndaemon\nmaxconn 2000\nnserver 1.1.1.1\nnserver 8.8.4.4\nnserver 2001:4860:4860::8888\nnserver 2001:4860:4860::8844\nnserver 2404:6800:4005:813::2003\nnscache 65536\ntimeouts 1 5 30 60 180 1800 15 60\nsetgid 65535\nsetuid 65535\nstacksize 6291456 \nflush\n"
+        print "\n" $1 "\n"
+        print "proxy -6 -n -a -p" $4 " -i" $3 " -e" ipv6 "\n"
+        print "flush\n"
+    }' ${WORKDATA} >/usr/local/etc/3proxy/3proxy.cfg
 }
 
+# Hàm khởi động lại 3proxy
+restart_3proxy() {
+    systemctl restart 3proxy
+}
+
+# Hàm thêm công việc quay số vào crontab
+add_rotation_cronjob() {
+    echo "*/10 * * * * $rotate_script" >> /etc/crontab
+}
+
+# Kiểm tra và cài đặt dependencies
+install_dependencies() {
+    echo "Installing dependencies..."
+    yum -y install wget gcc net-tools bsdtar zip >/dev/null
+}
+
+# Thiết lập cấu hình mặc định
+setup_default_config() {
+    echo "Setting up default configuration..."
+    cat << EOF > /etc/rc.d/rc.local
+#!/bin/bash
+touch /var/lock/subsys/local
+EOF
+    chmod +x /etc/rc.d/rc.local
+}
+
+# Cài đặt 3proxy
 install_3proxy() {
-    echo "installing 3proxy"
-    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
+    echo "Installing 3proxy..."
+    local URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    cp ./scripts/rc.d/proxy.sh /etc/init.d/3proxy
-    chmod +x /etc/init.d/3proxy
-    chkconfig 3proxy on
     cd $WORKDIR
 }
 
-download_proxy() {
-    cd "$WORKDIR" || exit 1
-    curl -o proxy.txt https://transfer.sh/proxy.txt
-}
-
-gen_3proxy() {
-    cat <<EOF
-daemon
-maxconn 4000
-nserver 1.1.1.1
-nserver 8.8.4.4
-nserver 2001:4860:4860::8888
-nserver 2001:4860:4860::8844
-nscache 65536
-timeouts 1 5 30 60 180 1800 15 60
-setgid 65535
-setuid 65535
-stacksize 6291456 
-flush
-
-$(awk -F "/" '{print "auth iponly\n" \
-"allow " $1 "\n" \
-"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' "${WORKDATA}")
-EOF
-}
-
+# Hàm tạo dữ liệu proxy
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "$(gen64 $IP6)" >> "${WORKDATA}ipv6.txt"
-        echo "$IP4/$port:user$port:$(random)" >> "${WORKDATA}ipv4.txt"
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
+# Hàm tạo tệp cấu hình iptables
 gen_iptables() {
-    cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDATA}") 
-EOF
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
 }
 
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' "${WORKDATA}")
-EOF
+# Hàm tạo tệp cấu hình 3proxy
+gen_3proxy() {
+    awk -F "/" '{
+        print "\ndaemon\nmaxconn 2000\nnserver 1.1.1.1\nnserver 8.8.4.4\nnserver 2001:4860:4860::8888\nnserver 2001:4860:4860::8844\nnserver 2404:6800:4005:813::2003\nnscache 65536\ntimeouts 1 5 30 60 180 1800 15 60\nsetgid 65535\nsetuid 65535\nstacksize 6291456 \nflush\n"
+        print "\n" $1 "\n"
+        print "proxy -6 -n -a -p" $4 " -i“ $3 “ -e”$5”\n”
+print “flush\n”
+}’ ${WORKDATA}
 }
 
-echo "Installing necessary packages"
-sudo apt-get update
-sudo apt-get -y install gcc net-tools libssl-dev curl >/dev/null
+Hàm tạo tệp proxy cho người dùng
 
-install_3proxy
+gen_proxy_file_for_user() {
+awk -F “/” ‘{print $3 “:” $4 “:” $1 “:” $2 }’ ${WORKDATA} > proxy.txt
+}
 
-echo "Working folder = /home/bkns"
-WORKDIR="/home/bkns"
-WORKDATA="${WORKDIR}/data.txt"
-mkdir -p "$WORKDIR" && cd "$_" || exit 1
+Hàm tạo script quay số
 
-# Lấy phần thứ 3 và thứ 4 của địa chỉ IPv4 để tạo địa chỉ IPv6
-IPC=$(echo "$ipv4Local" | cut -d"." -f3)
-IPD=$(echo "$ipv4Local" | cut -d"." -f4)
+create_rotate_script() {
+local rotate_script=”${WORKDIR}/rotate_proxies.sh”
+echo ‘#!/bin/bash’ > “$rotate_script”
+echo ‘new_ipv6=$(get_new_ipv6)’ >> “$rotate_script”
+echo ‘update_3proxy_config “$new_ipv6”’ >> “$rotate_script”
+echo ‘restart_3proxy’ >> “$rotate_script”
+chmod +x “$rotate_script”
+}
 
-echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
+Hàm hiển thị danh sách proxy
 
-FIRST_PORT=10000
-LAST_PORT=12000
+show_proxy_list() {
+echo “Proxy List:”
+cat proxy.txt
+}
 
-gen_data >"$WORKDIR/data.txt"
-gen_iptables >"$WORKDIR/boot_iptables.sh"
-gen_ifconfig >"$WORKDIR/boot_ifconfig.sh"
-chmod +x "$WORKDIR"/boot_*.sh /etc/rc.local
+Hàm tải proxy
 
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+download_proxy() {
+echo “Downloading proxies…”
+curl -F “$PROXY_CONFIG_FILE” https://transfer.sh > proxy.txt
+echo “Proxies downloaded successfully.”
+}
 
-cat >>/etc/rc.local <<EOF
-bash "${WORKDIR}/boot_iptables.sh"
-bash "${WORKDIR}/boot_ifconfig.sh"
-ulimit -n 10048
+Hàm quay số và khởi động lại proxy
+
+rotate_and_restart() {
+while true; do
+for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
+IPV6=$(head -n $i $WORKDIR/ipv6.txt | tail -n 1)
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h$IP4 -e$IPV6 -p$i
+done
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
-EOF
+sleep 900  # Sleep for 15 minutes (900 seconds)
+done
+}
 
-sudo bash /etc/rc.local
+Hàm hiển thị menu
 
-rm -rf /root/setup.sh
-rm -rf /root/3proxy-3proxy-0.8.6
+show_menu() {
+clear
+echo “Menu:”
+echo “1. Generate and Update proxies”
+echo “2. Rotate proxies automatically”
+echo “3. Show proxy list”
+echo “4. Download proxy list”
+echo “5. Exit”
+}
 
-echo "Starting Proxy"
+Hàm chạy menu
 
-download_proxy
+run_menu() {
+while true; do
+show_menu
+read -p “Choose an option (1-5): “ choice
+
+    case $choice in
+        1)
+            gen_data >${WORKDIR}/data.txt
+            gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+            echo "Proxies generated and updated in the list."
+            ;;
+        2)
+            rotate_proxies &
+            echo "Automatic proxy rotation started."
+            ;;
+        3)
+            show_proxy_list
+            ;;
+        4)
+            download_proxy
+            ;;
+        5)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid option. Please choose between 1 and 5."
+            ;;
+    esac
+
+    sleep 2
+done
+
+}
+
+Main function
+
+main() {
+install_dependencies
+setup_default_config
+install_3proxy
+WORKDIR=”/home/cloudfly”
+WORKDATA=”${WORKDIR}/data.txt”
+mkdir -p $WORKDIR && cd $WORKDIR
+IP4=$(curl -4 -s icanhazip.com)
+IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d’:’)
+echo “Internal IP = ${IP4}. External IPv6 Subnet = ${IP6}”
+
+while :; do
+    read -p "Enter FIRST_PORT (between 10000 and 60000): " FIRST_PORT
+    [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
+    if ((FIRST_PORT >= 10000 && FIRST_PORT <= 60000)); then
+        echo "OK! Valid number"
+        break
+    else
+        echo "Number is out of range, please try again"
+    fi
+done
+
+LAST_PORT=$(($FIRST_PORT + 5000))
+echo "LAST_PORT is $LAST_PORT. Continuing..."
+
+create_rotate_script
+add_rotation_cronjob
+run_menu
+
+}
+
+main
+	
