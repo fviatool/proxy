@@ -18,20 +18,19 @@ gen64() {
 }
 
 install_3proxy() {
-    echo "installing 3proxy"
-    apt-get update && apt-get install -y wget gcc bsdtar make >/dev/null
+    echo "Installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | tar -xzvf -
     cd 3proxy-3proxy-0.8.6 || exit 1
     make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
-    cp src/3proxy /usr/local/etc/3proxy/bin/
+    sudo mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    sudo cp src/3proxy /usr/local/etc/3proxy/bin/
     cd "$WORKDIR" || exit 1
 }
 
 download_proxy() {
     cd "$WORKDIR" || exit 1
-    curl -F "proxy.txt" https://transfer.sh
+    curl -o proxy.txt https://transfer.sh/proxy.txt
 }
 
 gen_3proxy() {
@@ -57,8 +56,8 @@ EOF
 }
 
 gen_data() {
-    seq "$FIRST_PORT" "$LAST_PORT" | while read -r port; do
-        echo "$(gen64 "$IP6")" >> "${WORKDATA}ipv6.txt"
+    seq $FIRST_PORT $LAST_PORT | while read port; do
+        echo "$(gen64 $IP6)" >> "${WORKDATA}ipv6.txt"
         echo "$IP4/$port:user$port:$(random)" >> "${WORKDATA}ipv4.txt"
     done
 }
@@ -75,15 +74,16 @@ $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' "${WORKDATA}")
 EOF
 }
 
-echo "installing apps"
-apt-get update && apt-get install -y gcc net-tools bsdtar zip >/dev/null
+echo "Installing necessary packages"
+sudo apt-get update
+sudo apt-get -y install gcc net-tools libssl-dev curl >/dev/null
 
 install_3proxy
 
-echo "working folder = /home/bkns"
+echo "Working folder = /home/bkns"
 WORKDIR="/home/bkns"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir "$WORKDIR" && cd "$_" || exit 1
+mkdir -p "$WORKDIR" && cd "$_" || exit 1
 
 # Lấy phần thứ 3 và thứ 4 của địa chỉ IPv4 để tạo địa chỉ IPv6
 IPC=$(echo "$ipv4Local" | cut -d"." -f3)
@@ -94,10 +94,10 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 FIRST_PORT=10000
 LAST_PORT=12000
 
-gen_data > "$WORKDIR/data.txt"
-gen_iptables > "$WORKDIR/boot_iptables.sh"
-gen_ifconfig > "$WORKDIR/boot_ifconfig.sh"
-chmod +x boot_*.sh /etc/rc.local
+gen_data >"$WORKDIR/data.txt"
+gen_iptables >"$WORKDIR/boot_iptables.sh"
+gen_ifconfig >"$WORKDIR/boot_ifconfig.sh"
+chmod +x "$WORKDIR"/boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
@@ -108,7 +108,7 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
-bash /etc/rc.local
+sudo bash /etc/rc.local
 
 rm -rf /root/setup.sh
 rm -rf /root/3proxy-3proxy-0.8.6
