@@ -60,14 +60,15 @@ gen_data() {
 }
 
 gen_iptables() {
-    cat <<EOF$(awk -F “/” ‘{print “iptables -I INPUT -p tcp –dport “ $2 “  -m state –state NEW -j ACCEPT”}’ ${WORKDATA})
+    cat <<EOF
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $2 " -m state --state NEW -j ACCEPT"}' ${WORKDATA})
 EOF
 }
 
 gen_ifconfig() {
-cat <<EOF
-$(awk -F “/” ‘{print “ifconfig eth0 add “ $3 “/64”}’ ${WORKDATA})
-$(awk -F “/” ‘{print “ifconfig ens33 add “ $3 “/64”}’ ${WORKDATA})
+    cat <<EOF
+$(awk -F "/" '{print "ifconfig eth0 add " $3 "/64"}' ${WORKDATA})
+$(awk -F "/" '{print "ifconfig ens33 add " $3 "/64"}' ${WORKDATA})
 EOF
 }
 
