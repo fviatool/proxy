@@ -85,7 +85,6 @@ touch /var/lock/subsys/local
 EOF
 
 echo "installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
