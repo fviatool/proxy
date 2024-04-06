@@ -101,15 +101,15 @@ echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
 while :; do
   FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-  if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 90000)); then
+  if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "OK! Valid number"
+    LAST_PORT=$((FIRST_PORT + 9999))
+    echo "LAST_PORT is $LAST_PORT. Continue..."
     break
   else
     echo "Invalid number, try again"
   fi
 done
-LAST_PORT=$(($FIRST_PORT + 10000))
-echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
