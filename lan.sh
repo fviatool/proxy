@@ -75,7 +75,7 @@ EOF
 
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+$(awk -F "/" '{print "ifconfig ens33 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
@@ -109,7 +109,7 @@ while :; do
     echo "Number out of range, try again"
   fi
 done
-LAST_PORT=$(($FIRST_PORT + 750))
+LAST_PORT=$(($FIRST_PORT + 10000))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >$WORKDIR/data.txt
