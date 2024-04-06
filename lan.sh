@@ -108,6 +108,8 @@ while :; do
     echo "Invalid number, try again"
   fi
 done
+LAST_PORT=$(($FIRST_PORT + 10000))
+echo "LAST_PORT is $LAST_PORT. Continue..."
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
