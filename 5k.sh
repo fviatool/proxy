@@ -62,7 +62,6 @@ $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
-
 gen_data() {
     userproxy=$(random)
     passproxy=$(random)
@@ -82,6 +81,7 @@ gen_ifconfig() {
 $(awk -F "/" '{print "ifconfig ens33 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
+
 echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
