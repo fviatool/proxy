@@ -66,7 +66,8 @@ EOF
 
 gen_ifconfig() {
 cat <<EOF
-$(awk -F “/” ‘{print “ifconfig eth0 inet6 add “ $3 “/64”}’ ${WORKDATA})
+$(awk -F “/” ‘{print “ifconfig eth0 add “ $3 “/64”}’ ${WORKDATA})
+$(awk -F “/” ‘{print “ifconfig ens33 add “ $3 “/64”}’ ${WORKDATA})
 EOF
 }
 
