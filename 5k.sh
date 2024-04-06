@@ -48,14 +48,16 @@ EOF
 }
 
 gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
+    cat > proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "$IP4/$port/$(gen64 $IP6)"
+        userproxy=$(random)
+        passproxy=$(random)
+        echo "$userproxy/$passproxy/$IP4/$port/$(gen64 $IP6)"
     done
 }
 
@@ -71,6 +73,7 @@ $(awk -F "/" '{print "ifconfig eth0 add " $3 "/64"}' ${WORKDATA})
 $(awk -F "/" '{print "ifconfig ens33 add " $3 "/64"}' ${WORKDATA})
 EOF
 }
+
 
 echo “installing apps”
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
