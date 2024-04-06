@@ -18,7 +18,7 @@ install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
-    cd /home/cloudfly/3proxy-3proxy-0.8.6 || exit 1
+    cd 3proxy-3proxy-0.8.6 || exit 1
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
@@ -30,7 +30,8 @@ install_3proxy() {
 
 download_proxy() {
     cd /home/cloudfly || exit 1
-    curl -F "file=@proxy.txt" https://file.io || exit 1
+    curl -F "file=@proxy.txt" https:
+    //file.io || exit 1
 }
 
 gen_3proxy() {
