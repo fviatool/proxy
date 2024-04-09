@@ -114,6 +114,10 @@ gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
+# Thêm lệnh chmod vào đây để cấp quyền truy cập cho các tập tin và thư mục cần thiết
+chmod +x /usr/local/etc/3proxy/bin/3proxy
+chmod +x /etc/rc.local
+
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
