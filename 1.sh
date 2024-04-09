@@ -27,8 +27,8 @@ install_3proxy() {
 }
 
 download_proxy() {
-cd /home/cloudfly
-curl -F "file=@proxy.txt" https://file.io
+    cd /home/cloudfly
+    curl -F "file=@proxy.txt" https://file.io
 }
 
 gen_3proxy() {
@@ -92,16 +92,16 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
-IP4=192.168.1.123
+IP4=192.168.1.123 # Thay đổi IP4 thành địa chỉ IP của máy chủ của bạn
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
+echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
 while :; do
   FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "OK! Valid number"
-    LAST_PORT=$((FIRST_PORT + 9999))
+    LAST_PORT=$((FIRST_PORT + 999))
     echo "LAST_PORT is $LAST_PORT. Continue..."
     break
   else
