@@ -1,88 +1,156 @@
-Để kết hợp các bước trên vào một tập tin và xuất file proxy ip:port.txt, bạn có thể thực hiện như sau:#!/bin/bash
+#!/bin/bash
 
-# Kiểm tra xem script được chạy với quyền root hay không
-if [ "$(id -u)" != "0" ]; then
-    echo "Bạn cần chạy script này với quyền root." 1>&2
-    exit 1
-fi
+ipv6_subnet_full="$1"
+net_interface="$2"
+pool_name="$3"
+number_ipv6="${4:-250}"
+unique_ip="${5:-1}"
+start_port="${6:-32000}"
 
-# Cập nhật danh sách gói và cài đặt Squid Proxy
-apt update
-apt -y install squid
+sh_add_ip="add_ip_${pool_name}.sh"
 
-# Sao lưu cấu hình Squid Proxy mặc định
-mv /etc/squid/squid.conf /etc/squid/squid.conf.bak
+gen_ipv6() {
+    network="$1"
+    ipv6=$(openssl rand -hex 8 | sed 's/\(..\)/\1:/g; s/.$//')
+    echo "${ipv6}${network}"
+}
 
-# Tạo một tập tin cấu hình Squid Proxy mới
-cat <<EOT >> /etc/squid/squid.conf
-http_port 3128
-http_port 8080
-http_port 8888
+add_ipv6() {
+    num_ips="$1"
+    unique_ip="$2"
+    network2="$ipv6_subnet_full"
+    list_network2=($(ipv6calc -s "$network2" | awk '{print $4}'))
+    list_ipv6=()
 
-acl localnet src 0.0.0.1-0.255.255.255
-acl localnet src 10.0.0.0/8
-acl localnet src 100.64.0.0/10
-acl localnet src 169.254.0.0/16
-acl localnet src 172.16.0.0/12
-acl localnet src 192.168.0.0/16
-acl localnet src fc00::/7
-acl localnet src fe80::/10
+    if [ -f "$sh_add_ip" ]; then
+        rm "$sh_add_ip"
+        echo "$sh_add_ip exists. Removed"
+    fi
 
+    if [ "$unique_ip" -eq 1 ]; then
+        subnet=$(shuf -e "${list_network2[@]}" -n "$num_ips")
+
+        for sub in $subnet; do
+            ipv6=$(gen_ipv6 "$sub")
+            list_ipv6+=("$ipv6")
+
+            cmd="ip -6 addr add ${ipv6}/64 dev ${net_interface}"
+
+            echo "$cmd" >> "$sh_add_ip"
+        done
+    else
+        subnet=$(shuf -e "${list_network2[@]}" -n 10)
+
+        for ((i = 0; i < num_ips; i++)); do
+            sub=${subnet[$(($i % 10))]}
+            ipv6=$(gen_ipv6 "$sub")
+            list_ipv6+=("$ipv6")
+
+            cmd="ip -6 addr add ${ipv6}/64 dev ${net_interface}"
+
+            echo "$cmd" >> "$sh_add_ip"
+        done
+    fi
+
+    echo "${list_ipv6[@]}"
+}
+
+cfg_squid="
+max_filedesc 500000
+pid_filename /usr/local/squid/var/run/${pool_name}.pid
+access_log none
+cache_store_log none
+# Hide client ip #
+forwarded_for delete
+# Turn off via header #
+via off
+# Deny request for original source of a request
+follow_x_forwarded_for allow localhost
+follow_x_forwarded_for deny all
+# See below
+request_header_access X-Forwarded-For deny all
+request_header_access Authorization allow all
+request_header_access Proxy-Authorization allow all
+request_header_access Cache-Control allow all
+request_header_access Content-Length allow all
+request_header_access Content-Type allow all
+request_header_access Date allow all
+request_header_access Host allow all
+request_header_access If-Modified-Since allow all
+request_header_access Pragma allow all
+request_header_access Accept allow all
+request_header_access Accept-Charset allow all
+request_header_access Accept-Encoding allow all
+request_header_access Accept-Language allow all
+request_header_access Connection allow all
+request_header_access All deny all
+cache deny all
+acl to_ipv6 dst ipv6
+http_access deny all !to_ipv6
+acl allow_net src 1.1.1.1
+"
+
+squid_conf_refresh="
+refresh_pattern ^ftp: 1440 20% 10080
+refresh_pattern ^gopher: 1440 0% 1440
+refresh_pattern -i (/cgi-bin/|\?) 0 0% 0
+refresh_pattern . 0 20% 4320
+"
+
+squid_conf_suffix="
+# Common settings
 acl SSL_ports port 443
-acl Safe_ports port 80          # http
-acl Safe_ports port 21          # ftp
-acl Safe_ports port 443         # https
-acl Safe_ports port 70          # gopher
-acl Safe_ports port 210         # wais
+acl Safe_ports port 80      # http
+acl Safe_ports port 21      # ftp
+acl Safe_ports port 443     # https
+acl Safe_ports port 70      # gopher
+acl Safe_ports port 210     # wais
 acl Safe_ports port 1025-65535  # unregistered ports
-acl Safe_ports port 280         # http-mgmt
-acl Safe_ports port 488         # gss-http
-acl Safe_ports port 591         # filemaker
-acl Safe_ports port 777         # multiling http
+acl Safe_ports port 280     # http-mgmt
+acl Safe_ports port 488     # gss-http
+acl Safe_ports port 591     # filemaker
+acl Safe_ports port 777     # multiling http
 acl CONNECT method CONNECT
-
 http_access deny !Safe_ports
 http_access deny CONNECT !SSL_ports
 http_access allow localhost manager
 http_access deny manager
-http_access allow localnet
-http_access allow localhost
+http_access allow allow_net
 http_access deny all
-http_port 3128
+coredump_dir /var/spool/squid3
+unique_hostname V6proxies-Net
+visible_hostname V6proxies-Net
+"
 
-coredump_dir /var/spool/squid
-EOT
+proxies=""
 
-# Khởi động lại dịch vụ Squid
-systemctl restart squid
+ipv6=($(add_ipv6 "$number_ipv6" "$unique_ip"))
 
-echo "Cài đặt và cấu hình Squid Proxy đã hoàn tất."
+for ip_out in "${ipv6[@]}"; do
+    proxy_format="
+http_port ${start_port}
+acl p${start_port} localport ${start_port}
+tcp_outgoing_address ${ip_out} p${start_port}
+"
+    start_port=$((start_port + 1))
+    proxies+="$proxy_format\n"
+done
 
-# Xóa tệp cấu hình Squid hiện tại và tạo tập tin mới từ URL đã cho
-rm -f /etc/squid/squid.conf
-wget --no-check-certificate -O /etc/squid/squid.conf https://raw.githubusercontent.com/sc6r-develop3rr/Squid-Proxy-Multiple-Port-Script/main/squid.conf
-    
-# Tạo tập tin danh sách đen
-touch /etc/squid/blacklist.acl
-    
-# Mở các cổng cho Squid
-iptables -I INPUT -p tcp --dport 5000 -j ACCEPT
-iptables -I INPUT -p tcp --dport 5001 -j ACCEPT
-iptables -I INPUT -p tcp --dport 5002 -j ACCEPT
-iptables -I INPUT -p tcp --dport 5003 -j ACCEPT
-iptables -I INPUT -p tcp --dport 5004 -j ACCEPT
-iptables -I INPUT -p tcp --dport 5005 -j ACCEPT
-    
-# Khởi động lại dịch vụ Squid
-systemctl restart squid
+cfg_squid_gen=$(echo -e "$cfg_squid" | sed "s/{pid}/${pool_name}/g" | sed "s/{squid_conf_refresh}/$squid_conf_refresh/g" | sed "s/{squid_conf_suffix}/$squid_conf_suffix/g" | sed "s/{block_proxies}/$proxies/g")
 
-echo "Cấu hình Squid Proxy với nhiều cổng đã được thiết lập."
+squid_conf_file="/etc/squid/squid-${pool_name}.conf"
+if [ -f "$squid_conf_file" ]; then
+    rm "$squid_conf_file"
+    echo "$squid_conf_file exists. Removed"
+fi
 
-# Xuất danh sách proxy ip:port
-echo "Danh sách proxy ip:port:" > proxy_ip_port.txt
-echo "127.0.0.1:3128" >> proxy_ip_port.txt
-echo "127.0.0.1:8080" >> proxy_ip_port.txt
-echo "127.0.0.1:8888" >> proxy_ip_port.txt
+echo -e "$cfg_squid_gen" > "$squid_conf_file"
 
-echo "File proxy_ip_port.txt đã được tạo."
-Điều này sẽ thực hiện cài đặt và cấu hình Squid Proxy cùng với việc mở nhiều cổng và sau đó xuất danh sách proxy ip:port vào tập tin proxy_ip_port.txt.
+echo "=========================== \n"
+echo "\n \n"
+echo "Run two command bellow to start proxies"
+echo "\n \n"
+echo "bash $sh_add_ip"
+echo "/usr/local/squid/sbin/squid -f $squid_conf_file"
+echo "\n \n"
+echo "Create $number_ipv6 proxies. Port start from $start_port"
