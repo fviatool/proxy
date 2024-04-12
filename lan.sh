@@ -2,16 +2,16 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
 # Hàm kiểm tra và chọn tên giao diện mạng tự động
@@ -23,18 +23,18 @@ install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | tar -xzvf -
-    cd 3proxy-3proxy-0.8.6
+    cd 3proxy-3proxy-0.8.6 || exit
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
     cp ./scripts/rc.d/proxy.sh /etc/init.d/3proxy
     chmod +x /etc/init.d/3proxy
     chkconfig 3proxy on
-    cd $WORKDIR || return
+    cd "$WORKDIR" || exit
 }
 
 download_proxy() {
-    cd /home/cloudfly || return
+    cd /home/cloudfly || exit
     curl -F "file=@proxy.txt" https://file.io
 }
 
@@ -56,27 +56,22 @@ flush
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
 "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' ${WORKDATA})
+"flush\n"}' "$WORKDATA")
 EOF
 }
 
 gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
-EOF
+    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' "$WORKDATA" > proxy.txt
 }
 
-
 gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
+    seq "$FIRST_PORT" "$LAST_PORT" | while read -r port; do
+        echo "//$IP4/$port/$(gen64 "$IP6")"
     done
 }
 
 gen_iptables() {
-    cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "$WORKDATA"
 }
 
 # Hàm cập nhật thông tin giao diện mạng tự động
@@ -94,44 +89,44 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "Dang Tien Hanh Cai Dat Proxy"
+echo "Đang Tiến Hành Cài Đặt Proxy"
 
 install_3proxy
 
-echo "working folder = /home/cloudfly"
+echo "Thư Mục Làm Việc = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR || true
-cd $WORKDIR || exit
+mkdir "$WORKDIR" || true
+cd "$WORKDIR" || exit
 
 update_network_info
 
 IP4=$(get_ipv4)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
+echo "IP Nội Bộ = ${IP4}. Subnet IPv6 Ngoại Trời = ${IP6}"
 
 while :; do
-  FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-  if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-    echo "OK! Random Ngau Nhien Port"
+    FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
+    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then    
+    echo "OK! Random Port Ngẫu Nhiên"
     LAST_PORT=$((FIRST_PORT + 999))
-    echo "LAST_PORT is $LAST_PORT. Tien Hanh Tiep Tuc..."
+    echo "Random $LAST_PORT. Tiếp Tục..."
     break
-  else
-    echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
-  fi
+else
+    echo "Tạo Cấu Hình Proxy"
+fi
+
 done
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+
+gen_data >”$WORKDIR/data.txt”
+gen_iptables >”$WORKDIR/boot_iptables.sh”
 chmod +x boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
+bash “${WORKDIR}/boot_iptables.sh”
 ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
@@ -140,5 +135,5 @@ bash /etc/rc.local
 
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
-echo "Starting Proxy"
+echo “Khởi Động Proxy”
 download_proxy
