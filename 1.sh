@@ -102,7 +102,7 @@ while :; do
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "OK! Valid number"
     LAST_PORT=$((FIRST_PORT + 999))
-    echo "LAST_PORT is $LAST_PORT. Continue..."
+    echo "$LAST_PORT. Continue..."
     break
   else
     echo "Invalid number, try again"
