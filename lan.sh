@@ -13,10 +13,16 @@ gen64() {
 	}
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
+# Hàm kiểm tra và chọn tên giao diện mạng tự động
+auto_detect_interface() {
+    INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
+}
+
 install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- $URL | bsdtar -xvf-
+    wget -qO- $URL | tar -xzvf -
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
@@ -24,12 +30,12 @@ install_3proxy() {
     cp ./scripts/rc.d/proxy.sh /etc/init.d/3proxy
     chmod +x /etc/init.d/3proxy
     chkconfig 3proxy on
-    cd $WORKDIR
+    cd $WORKDIR || return
 }
 
 download_proxy() {
-cd /home/cloudfly
-curl -F "file=@proxy.txt" https://file.io
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
 }
 
 gen_3proxy() {
@@ -69,14 +75,13 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ifconfig Ethernet inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
+# Hàm cập nhật thông tin giao diện mạng tự động
+update_network_info() {
+    auto_detect_interface
 }
 
 get_ipv4() {
@@ -96,12 +101,15 @@ install_3proxy
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir $WORKDIR || true
+cd $WORKDIR || exit
+
+update_network_info
 
 IP4=$(get_ipv4)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
+echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
 while :; do
   FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
@@ -133,5 +141,5 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo “Starting Proxy”
+echo "Starting Proxy"
 download_proxy
