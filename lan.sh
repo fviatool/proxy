@@ -115,7 +115,7 @@ while :; do
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "OK! Random Ngau Nhien Port"
     LAST_PORT=$((FIRST_PORT + 999))
-    echo "Random to $LAST_PORT. Tien Hanh Tiep Tuc..."
+    echo "LAST_PORT is $LAST_PORT. Tien Hanh Tiep Tuc..."
     break
   else
     echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
@@ -123,14 +123,12 @@ while :; do
 done
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
