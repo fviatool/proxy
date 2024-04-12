@@ -76,6 +76,7 @@ useradd squid
 chmod 777 /var/log/squid/
 systemctl disable firewalld
 cd /opt/youni_ipv4_to_ipv6
-wget https://https://raw.githubusercontent.com/fviatool/proxy/main/sq.sh
+
+wget https://raw.githubusercontent.com/fviatool/proxy/main/sq.sh
 chmod 777 sq.sh
 bash sq.sh
