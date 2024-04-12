@@ -79,6 +79,11 @@ $(awk -F "/" '{print "ifconfig Ethernet inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
+get_ipv4() {
+    ipv4=$(curl -4 -s icanhazip.com)
+    echo "$ipv4"
+}
+
 cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
 touch /var/lock/subsys/local
@@ -93,7 +98,7 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
-IP4=$(curl -4 -s icanhazip.com)
+IP4=$(get_ipv4)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
@@ -102,7 +107,7 @@ while :; do
   FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "OK! Valid number"
-    LAST_PORT=$((FIRST_PORT + 9999))
+    LAST_PORT=$((FIRST_PORT + 999))
     echo "LAST_PORT is $LAST_PORT. Continue..."
     break
   else
@@ -114,7 +119,6 @@ gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x $WORKDIR/boot_*.sh /etc/rc.local
-
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
@@ -129,5 +133,5 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo "Starting Proxy"
+echo “Starting Proxy”
 download_proxy
