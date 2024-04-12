@@ -122,19 +122,17 @@ while :; do
     echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
   fi
 done
+gen_data >”${WORKDIR}/data.txt”
+gen_iptables >”${WORKDIR}/boot_iptables.sh”
+gen_ifconfig >”${WORKDIR}/boot_ifconfig.sh”
+rotate_proxy_script >”${WORKDIR}/rotate_3proxy.sh”
 
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x $WORKDIR/boot_*.sh /etc/rc.local
+chmod +x “${WORKDIR}/boot_ifconfig.sh” “${WORKDIR}/boot_iptables.sh” /etc/rc.local
+chmod +x “${WORKDIR}/rotate_3proxy.sh” /usr/local/etc/3proxy/rotate_3proxy.sh
 
-# Thêm lệnh chmod vào đây để cấp quyền truy cập cho các tập tin và thư mục cần thiết
-chmod +x /usr/local/etc/3proxy/bin/3proxy
-chmod +x /etc/rc.local
+gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-
-cat >>/etc/rc.local <<EOF
+cat >> /etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 10048
