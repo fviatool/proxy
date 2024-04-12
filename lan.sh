@@ -141,6 +141,7 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
+# Định nghĩa hàm kiểm tra IPv6
 check_ipv6() {
     ping6 -c 3 ipv6.google.com >/dev/null 2>&1
     if [ $? -eq 0 ]; then
@@ -150,8 +151,16 @@ check_ipv6() {
     fi
 }
 
-echo "Starting Proxy"
-download_proxy
+# Thiết lập trap để gọi hàm check_ipv6 trước khi kết thúc script
+trap 'check_ipv6' EXIT
 
-# Kiểm tra kết nối IPv6
-check_ipv6
+# Ghi log và thông báo trước khi kết thúc script
+echo "Script is exiting..."
+
+# Nếu bạn có các dòng code khác ở đây, chúng sẽ được thực hiện trước khi gọi hàm check_ipv6
+
+# Kết thúc script
+exit
+
+echo “Starting Proxy”
+download_proxy
