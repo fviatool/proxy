@@ -2,32 +2,39 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
-    tr </dev/urandom -dc A-Za-z0-9 | head -c5
-    echo
+	tr </dev/urandom -dc A-Za-z0-9 | head -c5
+	echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
-
 gen64() {
-    ip64() {
-        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-    }
-    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+	ip64() {
+		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+	}
+	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+}
+
+# Hàm kiểm tra và chọn tên giao diện mạng tự động
+auto_detect_interface() {
+    INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
 }
 
 install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- $URL | bsdtar -xvf-
+    wget -qO- $URL | tar -xzvf -
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd $WORKDIR
+    cp ./scripts/rc.d/proxy.sh /etc/init.d/3proxy
+    chmod +x /etc/init.d/3proxy
+    chkconfig 3proxy on
+    cd $WORKDIR || return
 }
 
 download_proxy() {
-    cd /home/cloudfly
+    cd /home/cloudfly || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
@@ -59,6 +66,7 @@ $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
+
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
@@ -71,10 +79,14 @@ $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state 
 EOF
 }
 
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
+# Hàm cập nhật thông tin giao diện mạng tự động
+update_network_info() {
+    auto_detect_interface
+}
+
+get_ipv4() {
+    ipv4=$(curl -4 -s icanhazip.com)
+    echo "$ipv4"
 }
 
 cat << EOF > /etc/rc.d/rc.local
@@ -82,17 +94,18 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
+echo "Cai Dat Proxy"
 
 install_3proxy
 
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir -p $WORKDIR && cd $WORKDIR
 
-IP4=192.168.1.123 # Thay đổi IP4 thành địa chỉ IP của máy chủ của bạn
+update_network_info
+
+IP4=$(get_ipv4)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
@@ -100,29 +113,22 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 while :; do
   FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-    echo "OK! Valid number"
-    LAST_PORT=$((FIRST_PORT + 999))
-    echo "$LAST_PORT. Continue..."
+    echo "OK! Random Ngau Nhien Port"
+    LAST_PORT=$((FIRST_PORT + 22222))
+    echo "RANDOM $LAST_PORT..."
     break
   else
-    echo "Invalid number, try again"
+    echo "Thiet Lap 20k Proxy"
   fi
 done
-
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x $WORKDIR/boot_*.sh /etc/rc.local
-
-# Thêm lệnh chmod vào đây để cấp quyền truy cập cho các tập tin và thư mục cần thiết
-chmod +x /usr/local/etc/3proxy/bin/3proxy
-chmod +x /etc/rc.local
+chmod +x boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
@@ -131,6 +137,5 @@ bash /etc/rc.local
 
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
-
-echo "Starting Proxy"
+echo "Starting Proxy Done !"
 download_proxy
