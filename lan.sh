@@ -122,17 +122,14 @@ while :; do
     echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
   fi
 done
-gen_data >”${WORKDIR}/data.txt”
-gen_iptables >”${WORKDIR}/boot_iptables.sh”
-gen_ifconfig >”${WORKDIR}/boot_ifconfig.sh”
-rotate_proxy_script >”${WORKDIR}/rotate_3proxy.sh”
+gen_data >$WORKDIR/data.txt
+gen_iptables >$WORKDIR/boot_iptables.sh
+gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+chmod +x boot_*.sh /etc/rc.local
 
-chmod +x “${WORKDIR}/boot_ifconfig.sh” “${WORKDIR}/boot_iptables.sh” /etc/rc.local
-chmod +x “${WORKDIR}/rotate_3proxy.sh” /usr/local/etc/3proxy/rotate_3proxy.sh
+gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
-gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
-
-cat >> /etc/rc.local <<EOF
+cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 10048
@@ -143,6 +140,5 @@ bash /etc/rc.local
 
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
-
 echo "Starting Proxy"
 download_proxy
