@@ -252,7 +252,7 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "installing apps"
+echo "Dang Tien Hanh Cai Dat Proxy"
 
 install_3proxy
 
@@ -277,7 +277,7 @@ while :; do
     echo "LAST_PORT is $LAST_PORT. Continue..."
     break
   else
-    echo "Invalid number, try again"
+    echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
   fi
 done
 
