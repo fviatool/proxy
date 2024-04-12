@@ -114,9 +114,9 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 while :; do
   FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-    echo "OK! Valid number"
+    echo "OK! Random Ngau Nhien Port"
     LAST_PORT=$((FIRST_PORT + 999))
-    echo "LAST_PORT is $LAST_PORT. Continue..."
+    echo "LAST_PORT is $LAST_PORT. Tien Hanh Tiep Tuc..."
     break
   else
     echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
