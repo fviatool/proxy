@@ -141,5 +141,17 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
+check_ipv6() {
+    ping6 -c 3 ipv6.google.com >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "IPv6 connectivity: OK"
+    else
+        echo "IPv6 connectivity: Not OK"
+    fi
+}
+
 echo "Starting Proxy"
 download_proxy
+
+# Kiểm tra kết nối IPv6
+check_ipv6
