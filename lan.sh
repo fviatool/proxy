@@ -93,6 +93,7 @@ cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
 touch /var/lock/subsys/local
 EOF
+yum -y install gcc net-tools bsdtar zip >/dev/null
 
 echo "Dang Tien Hanh Cai Dat Proxy"
 
@@ -115,10 +116,10 @@ while :; do
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "OK! Random Ngau Nhien Port"
     LAST_PORT=$((FIRST_PORT + 999))
-    echo "LAST_PORT is $LAST_PORT. Tien Hanh Tiep Tuc..."
+    echo "RANDOM is $LAST_PORT. Tien Hanh Tiep Tuc..."
     break
   else
-    echo "Tao Song Cau Hinh Dang Thiet Lap Proxy"
+    echo "Dang Thiet Lap Proxy"
   fi
 done
 gen_data >$WORKDIR/data.txt
