@@ -79,5 +79,13 @@ ulimit -a
 chmod 755 /var/log/squid/
 systemctl disable firewalld
 
+# Cài đặt Python
+yum install -y python
+
+wget -c https://raw.githubusercontent.com/abdelyouni/ipv4_to_ipv6/main/gen_squid_conf.py
+
+# Di chuyển đến thư mục chứa script
 cd /opt/youni_ipv4_to_ipv6
+
+# Chạy script Python
 python gen_squid_conf.py
