@@ -66,7 +66,6 @@ $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
-
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
@@ -93,6 +92,8 @@ cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
 touch /var/lock/subsys/local
 EOF
+
+yum -y install gcc net-tools bsdtar zip >/dev/null
 
 echo "Cai Dat Proxy"
 
