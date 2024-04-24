@@ -1,35 +1,42 @@
-#!/bin/sh
+#!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+}
+
+auth_ip() {
+    echo "auth none"
+    port=$START_PORT
+    while read ip; do
+        echo "proxy -6 -n -a -p$port -i$IP4 -e$ip"
+        ((port+=1))
+    done < $WORKDIR/ipv6.txt
 }
 
 install_3proxy() {
-    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
+    echo "installing 3proxy"
+    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
-    cd 3proxy-0.9.4
+    cd 3proxy-3proxy-0.8.6 || exit 1
     make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/{bin,stat}
-    cp bin/3proxy /usr/local/etc/3proxy/bin/
-    cp ../scripts/rc.d/proxy.sh /etc/init.d/3proxy
-    chmod +x /etc/init.d/3proxy
-    update-rc.d 3proxy defaults
-    cd $WORKDIR
+    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    cp src/3proxy /usr/local/etc/3proxy/bin/
+    cd $WORKDIR || exit 1
 }
 
 download_proxy() {
     cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://file.io
+    curl -F "file=@proxy.txt" https://transfer.sh
 }
 
 gen_3proxy() {
@@ -49,7 +56,7 @@ flush
 
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
-"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
+"$(auth_ip)\n" \
 "flush\n"}' ${WORKDATA})
 EOF
 }
@@ -68,61 +75,44 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport "$4"  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
-get_ipv4() {
-    ipv4=$(curl -4 -s icanhazip.com)
-    echo "$ipv4"
+gen_ifconfig() {
+    cat <<EOF
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+EOF
 }
 
-# Hàm reset 3proxy
-reset_3proxy() {
-    # Kill 3proxy
-    pkill 3proxy
-
-    # Khởi động lại 3proxy
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
-}
-
-# Hàm cập nhật địa chỉ IPv6 và reset 3proxy
-update_ipv6_and_reset() {
-    new_ipv6=$(gen64 $IP6)
-    echo "Updating IPv6 Address: $new_ipv6"
-
-    # Cập nhật địa chỉ IPv6 cho proxy
-    sed -i "s/proxy -6 -n -a -p[0-9]* -i[0-9.]* -e[0-9a-f:]*$/proxy -6 -n -a -p${FIRST_PORT} -i${IP4} -e${new_ipv6}/" /usr/local/etc/3proxy/3proxy.cfg
-
-    # Reset 3proxy
-    reset_3proxy
-}
-
-# Lặp vô hạn để cập nhật địa chỉ IPv6 sau mỗi 5 phút
-while true; do
-    update_ipv6_and_reset
-    sleep 300  # Chờ 5 phút trước khi cập nhật lại
-done
-
-# Bỏ qua phần kiểm tra và chọn tên giao diện mạng tự động
-
-cat << EOF > /etc/rc.d/rc.local
+rotate_proxy_script() {
+    cat <<EOF
 #!/bin/bash
-touch /var/lock/subsys/local
+WORKDIR="/home/cloudfly"  # Update with your actual working directory
+IP4=\$(curl -4 -s icanhazip.com)
+while :; do
+    for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
+        IPV6=\$(head -n \$i \$WORKDIR/ipv6.txt | tail -n 1)
+        /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop
+        /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h\$IP4 -e\$IPV6 -p\$i
+    done
+    sleep 300  # Sleep for 5 minutes before rotating again
+done
 EOF
+}
 
-echo "Dang Tien Hanh Cai Dat Proxy"
+
+echo "installing apps"
+yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 install_3proxy
 
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p $WORKDIR && cd $WORKDIR
+mkdir $WORKDIR && cd $WORKDIR || exit 1
 
-update_network_info
-
-IP4=$(get_ipv4)
+IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
@@ -138,14 +128,19 @@ while :; do
     echo "Dang Thiet Lap Proxy"
   fi
 done
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
+
+gen_data >${WORKDIR}/data.txt
+gen_iptables >${WORKDIR}/boot_iptables.sh
+gen_ifconfig >${WORKDIR}/boot_ifconfig.sh
+rotate_proxy_script >${WORKDIR}/rotate_3proxy.sh
+
+chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
+bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
@@ -153,6 +148,7 @@ EOF
 bash /etc/rc.local
 
 gen_proxy_file_for_user
-rm -rf /root/3proxy-0.9.4
+rm -rf /root/3proxy-3proxy-0.8.6
+
 echo "Starting Proxy"
-download_proxy
+rotate_proxy_script &
