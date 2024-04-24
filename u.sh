@@ -132,7 +132,7 @@ done
 gen_data >${WORKDIR}/data.txt
 gen_iptables >${WORKDIR}/boot_iptables.sh
 gen_ifconfig >${WORKDIR}/boot_ifconfig.sh
-rotate_proxy_script >${WORKDIR}/rotate_3proxy.sh
+rotate_proxy_script >chmod +x ${WORKDIR}/rotate_3proxy.sh
 
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
 
