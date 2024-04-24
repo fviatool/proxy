@@ -63,7 +63,7 @@ gen_data() {
     done
 }
 
-echo "working folder = /home/cloudfly"
+echo "Thu Muc folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir -p $WORKDIR && cd $_ || exit 1
