@@ -72,23 +72,24 @@ IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
+
 echo "Generating proxy data..."
 while true; do
   read -p "Nhap So Luong Muon Tao: " PORT_COUNT
-  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
+  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Nhap mot so nguyen duong."; continue; }
   if ((PORT_COUNT > 0)); then
-    echo "OK! Valid number"
+    echo "OK! So luong hop le"
     FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
     if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-      echo "OK! Random port generated."
+      echo "Cổng ngẫu nhiên đã được tạo: $FIRST_PORT."
       LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-      echo "LAST_PORT is $LAST_PORT. Continue..."
+      echo "Dải cổng ngẫu nhiên là từ $FIRST_PORT đến $LAST_PORT."
       break
     else
-      echo "Random port out of range, try again"
+      echo "Cổng ngẫu nhiên nằm ngoài phạm vi cho phép, vui lòng thử lại."
     fi
   else
-    echo "Number must be greater than 0, try again"
+    echo "Số lượng phải lớn hơn 0, vui lòng thử lại."
   fi
 done
 
