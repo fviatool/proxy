@@ -87,11 +87,37 @@ get_ipv4() {
     echo "$ipv4"
 }
 
+# Hàm reset 3proxy
+reset_3proxy() {
+    # Kill 3proxy
+    pkill 3proxy
+
+    # Khởi động lại 3proxy
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+}
+
+# Hàm cập nhật địa chỉ IPv6 và reset 3proxy
+update_ipv6_and_reset() {
+    new_ipv6=$(gen64 $IP6)
+    echo "Updating IPv6 Address: $new_ipv6"
+
+    # Cập nhật địa chỉ IPv6 cho proxy
+    sed -i "s/proxy -6 -n -a -p[0-9]* -i[0-9.]* -e[0-9a-f:]*$/proxy -6 -n -a -p${FIRST_PORT} -i${IP4} -e${new_ipv6}/" /usr/local/etc/3proxy/3proxy.cfg
+
+    # Reset 3proxy
+    reset_3proxy
+}
+
+# Lặp vô hạn để cập nhật địa chỉ IPv6 sau mỗi 5 phút
+while true; do
+    update_ipv6_and_reset
+    sleep 300  # Chờ 5 phút trước khi cập nhật lại
+done
+
 cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
 touch /var/lock/subsys/local
 EOF
-yum -y install gcc net-tools bsdtar zip >/dev/null
 
 echo "Dang Tien Hanh Cai Dat Proxy"
 
@@ -122,7 +148,7 @@ while :; do
 done
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
-chmod +x boot_*.sh /etc/rc.local
+chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
