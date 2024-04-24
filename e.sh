@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/#!/bin/bash
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
@@ -27,15 +27,15 @@ auth_ip() {
 
 install_3proxy() {
     URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
-    wget -qO- $URL | bsdtar -xvf-
-    cd 3proxy-0.9.4
+    wget -qO- $URL | tar -xzvf -
+    cd 3proxy-0.9.4 || exit 1
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,stat}
     cp bin/3proxy /usr/local/etc/3proxy/bin/
     cp ../init.d/3proxy.sh /etc/init.d/3proxy
     chmod +x /etc/init.d/3proxy
-    chkconfig 3proxy on
-    cd $WORKDIR
+    systemctl enable 3proxy
+    cd $WORKDIR || exit 1
 }
 
 download_proxy() {
@@ -101,16 +101,6 @@ while :; do
         /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h\$IP4 -e\$IPV6 -p\$i
     done
     sleep 300  # Sleep for 5 minutes before rotating again
-
-    # Update IPv6 every 5 minutes
-    sleep 300
-    echo "Fetching new IPv6 addresses..."
-    IP6=\$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-    echo "New IPv6: \$IP6"
-    gen_data > ${WORKDIR}/data.txt
-    gen_ifconfig > ${WORKDIR}/boot_ifconfig.sh
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 done
 EOF
 }
@@ -161,7 +151,6 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF'
 
-
 sudo bash /etc/rc.local
 
 echo "Generating proxy file for users..."
@@ -170,5 +159,5 @@ gen_proxy_file_for_user
 echo "Starting 3proxy service..."
 sudo systemctl start 3proxy
 
-echo “Downloading proxy…”
+echo "Downloading proxy..."
 download_proxy
