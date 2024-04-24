@@ -68,16 +68,16 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
 
+echo "Generating proxy data..."
 while :; do
-  read -p "Enter the number of ports you want to generate: " PORT_COUNT
-  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
-  if ((PORT_COUNT > 0)); then
-    echo "OK! Valid number"
-    LAST_PORT=$(($FIRST_PORT + $PORT_COUNT - 1))
-    echo "LAST_PORT is $LAST_PORT. Continue..."
+  FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
+  if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+    echo "OK! Random port generated."
+    LAST_PORT=$((FIRST_PORT + 999))
+    echo "Random port range is $LAST_PORT. Continuing..."
     break
   else
-    echo "Number must be greater than 0, try again"
+    echo "Setting up proxy..."
   fi
 done
 
