@@ -26,6 +26,11 @@ install_3proxy() {
     cd $WORKDIR || exit 1
 }
 
+download_proxy() {
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
+}
+
 gen_3proxy() {
     cat <<EOF
 daemon
@@ -111,3 +116,4 @@ sudo systemctl enable rc-local
 sudo /etc/rc.local
 
 echo "Starting Proxy"
+download_proxy
