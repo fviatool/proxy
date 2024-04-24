@@ -75,8 +75,9 @@ echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
 
 echo "Generating proxy data..."
 while :; do
-  FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-  if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+  read -p "Nhap So Luong Proxy muon Tao:  " PORT_COUNT
+  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
+  if ((PORT_COUNT > 0)); then
     echo "OK! Random port generated."
     LAST_PORT=$((FIRST_PORT + 999))
     echo "Random port range is $LAST_PORT. Continuing..."
