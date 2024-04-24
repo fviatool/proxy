@@ -13,6 +13,7 @@ gen64() {
 	}
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
 install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -72,17 +73,6 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
 
 while :; do
-  read -p "Enter FIRST_PORT between 33000 and 63000: " FIRST_PORT
-  [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
-  if ((FIRST_PORT >= 33000 && FIRST_PORT <= 63000)); then
-    echo "OK! Valid number"
-    break
-  else
-    echo "Number out of range, try again"
-  fi
-done
-
-while :; do
   read -p "Enter the number of ports you want to generate: " PORT_COUNT
   [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
   if ((PORT_COUNT > 0)); then
@@ -100,9 +90,9 @@ gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x boot_*.sh /etc/rc.local
 
-# gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+# lgen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
-cat << EOF > /etc/rc.local
+cat << EOF > /etc/orc.local
 #!/bin/bash
 touch /var/lock/subsys/local
 bash ${WORKDIR}/boot_iptables.sh
