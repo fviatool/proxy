@@ -14,11 +14,6 @@ gen64() {
 	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
-# Hàm kiểm tra và chọn tên giao diện mạng tự động
-auto_detect_interface() {
-    INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
-}
-
 install_3proxy() {
     URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
@@ -26,9 +21,9 @@ install_3proxy() {
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,stat}
     cp bin/3proxy /usr/local/etc/3proxy/bin/
-    cp ../init.d/3proxy.sh /etc/init.d/3proxy
+    cp ../scripts/rc.d/proxy.sh /etc/init.d/3proxy
     chmod +x /etc/init.d/3proxy
-    chkconfig 3proxy on
+    update-rc.d 3proxy defaults
     cd $WORKDIR
 }
 
@@ -77,11 +72,6 @@ gen_iptables() {
 EOF
 }
 
-# Hàm cập nhật thông tin giao diện mạng tự động
-update_network_info() {
-    auto_detect_interface
-}
-
 get_ipv4() {
     ipv4=$(curl -4 -s icanhazip.com)
     echo "$ipv4"
@@ -113,6 +103,8 @@ while true; do
     update_ipv6_and_reset
     sleep 300  # Chờ 5 phút trước khi cập nhật lại
 done
+
+# Bỏ qua phần kiểm tra và chọn tên giao diện mạng tự động
 
 cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
