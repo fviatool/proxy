@@ -1,4 +1,4 @@
-#!/#!/bin/bash
+#!/bin/bash
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
@@ -40,8 +40,9 @@ install_3proxy() {
 
 download_proxy() {
     cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://transfer.sh
+    curl -F "file=@proxy.txt" https://file.io
 }
+
 
 gen_3proxy() {
     cat <<EOF
@@ -107,7 +108,7 @@ EOF
 
 echo "Installing necessary packages..."
 sudo apt update
-sudo apt install -y wget gcc net-tools bsdtar zip
+sudo apt install -y wget gcc net-tools libtool-bin
 
 echo "Installing 3proxy..."
 install_3proxy
@@ -140,7 +141,7 @@ gen_data > ${WORKDIR}/data.txt
 gen_iptables > ${WORKDIR}/boot_iptables.sh
 gen_ifconfig > ${WORKDIR}/boot_ifconfig.sh
 rotate_proxy_script > ${WORKDIR}/rotate_3proxy.sh
-chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
+chmod +x ${WORKDIR}/rotate_3proxy.sh
 gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
 echo "Configuring proxy settings..."
