@@ -42,7 +42,7 @@ download_proxy() {
 }
 
 gen_3proxy() {
-    cat <<EOF
+    cat <<EOF > /usr/local/etc/3proxy/3proxy.cfg
 daemon
 maxconn 2000
 nserver 1.1.1.1
@@ -134,9 +134,9 @@ done
 gen_data > ${WORKDIR}/data.txt
 gen_iptables > ${WORKDIR}/boot_iptables.sh
 gen_ifconfig > ${WORKDIR}/boot_ifconfig.sh
-rotate_proxy_script > ${WORKDIR}/rotate_3proxy.sh
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
-gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+rotate_proxy_script > ${WORKDIR}/rotate_3proxy.sh
+gen_3proxy
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
