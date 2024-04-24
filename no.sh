@@ -72,26 +72,24 @@ IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
+echo "Generating proxy data..."
 while true; do
-  read -p "Nhap So Luong Profile Muon Tao: " PORT_COUNT
-  if [[ ! $PORT_COUNT =~ ^[0-9]+$ ]]; then
-    continue
-  fi
-
+  read -p "Nhap So Luong Muon Tao: " PORT_COUNT
+  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
   if ((PORT_COUNT > 0)); then
-    FIRST_PORT=10000
-    LAST_PORT=90000
-    echo "OK! Generating $PORT_COUNT random ports between $FIRST_PORT and $LAST_PORT."
-    break
+    echo "OK! Valid number"
+    FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
+    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+      echo "OK! Random port generated."
+      LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
+      echo "LAST_PORT is $LAST_PORT. Continue..."
+      break
+    else
+      echo "Random port out of range, try again"
+    fi
   else
-    echo "Number of proxies must be greater than 0. Please try again."
+    echo "Number must be greater than 0, try again"
   fi
-done
-
-# Generate random ports
-for ((i = 0; i < PORT_COUNT; i++)); do
-  RANDOM_PORT=$((FIRST_PORT + RANDOM % (LAST_PORT - FIRST_PORT + 1)))
-  echo "Random port $((i+1)): $RANDOM_PORT"
 done
 
 gen_data >$WORKDIR/data.txt
