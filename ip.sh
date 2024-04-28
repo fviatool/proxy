@@ -24,8 +24,11 @@ if ip link show eth0 &> /dev/null; then
     IPV6_DEFAULTGW=2001:ee0:4f9b:92b0::1
     EOF
 
+    # Khởi động lại dịch vụ mạng
+    sudo systemctl restart network
+
     # Kiểm tra kết nối IPv6
-    if ip -6 route get 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
+    if ping6 -c 1 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
         echo "Kết nối IPv6 cho eth0 hoạt động."
     else
         echo "Lỗi: Kết nối IPv6 cho eth0 không hoạt động."
@@ -59,8 +62,11 @@ elif ip link show ens33 &> /dev/null; then
     IPV6_DEFAULTGW=2001:ee0:4f9b:92b0::1
     EOF
 
+    # Khởi động lại dịch vụ mạng
+    sudo systemctl restart network
+
     # Kiểm tra kết nối IPv6
-    if ip -6 route get 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
+    if ping6 -c 1 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
         echo "Kết nối IPv6 cho ens33 hoạt động."
     else
         echo "Lỗi: Kết nối IPv6 cho ens33 không hoạt động."
@@ -68,13 +74,10 @@ elif ip link show ens33 &> /dev/null; then
 
     # Cấp quyền cho địa chỉ IPv4 của ens33
     firewall-cmd --zone=public --add-source=192.168.1.17 --permanent
-    firewall-cmd --reload
+    firewall-cmd --reload 
 
 else
     echo "Không tìm thấy card mạng eth0 hoặc ens33."
-
-
-sudo systemctl restart network
-
 fi
-echo ‘Đã tạo IPV6 thành công!’
+
+ip -6 addr | grep inet6 | wc -l
