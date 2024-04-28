@@ -60,10 +60,8 @@ echo "Thu Muc folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir -p $WORKDIR && cd $_ || exit 1
-
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-
-echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
+IP6=$(echo "$IP6" | cut -f1-4 -d':')
+echo "Internal IP = $IP4. External subnet for IPv6 = $IP6"
 
 # Tạo dữ liệu proxy
 echo "Generating proxy data..."
