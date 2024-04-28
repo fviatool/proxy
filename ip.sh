@@ -69,7 +69,10 @@ fi
 # Khởi động lại dịch vụ mạng
 sudo systemctl restart network
 
+# Ping google.com bằng IPv6
 ping_google6() {
     ping6 -c 3 google.com
 }
 
+# Đếm tổng số địa chỉ IPv6 trên máy chủ
+ip -6 addr | grep inet6 | wc -l
