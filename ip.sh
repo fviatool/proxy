@@ -2,7 +2,7 @@
 
 # Kiểm tra card mạng eth0
 if ip link show eth0 &> /dev/null; then
-    echo "Card mạng eth0 đã được tìm thấy."
+    echo "Card mang eth0 !"
     
     # Thiết lập cấu hình mạng cho eth0
     cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
@@ -22,7 +22,7 @@ EOF
 
     # Kiểm tra kết nối IPv6
     if ip -6 route get 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
-        echo "Kết nối IPv6 cho eth0 hoạt động."
+        echo "Ket Noi ipv6 eth0 start."
     else
         echo "Lỗi: Kết nối IPv6 cho eth0 không hoạt động."
     fi
@@ -33,7 +33,7 @@ EOF
 
 # Kiểm tra card mạng ens33
 elif ip link show ens33 &> /dev/null; then
-    echo "Card mạng ens33 đã được tìm thấy."
+    echo "Card mang ens33 !"
     
     # Thiết lập cấu hình mạng cho ens33
     cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-ens33
@@ -53,7 +53,7 @@ EOF
 
     # Kiểm tra kết nối IPv6
     if ip -6 route get 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
-        echo "Kết nối IPv6 cho ens33 hoạt động."
+        echo "Ket Noi ipv6 ens33 Start"
     else
         echo "Lỗi: Kết nối IPv6 cho ens33 không hoạt động."
     fi
