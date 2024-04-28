@@ -69,4 +69,7 @@ fi
 # Khởi động lại dịch vụ mạng
 sudo systemctl restart network
 
-ip -6 addr | grep inet6 | wc -l
+ping_google6() {
+    ping6 -c 3 google.com
+}
+
