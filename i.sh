@@ -111,9 +111,9 @@ ip -6 addr | grep inet6 | wc -l
 # Kiểm tra kết nối IPv6 bằng cách ping Google
 ping_google6
 
-service network restart
-
 ip addr show
 ip route show
 ip link show
 ip -6 route show
+
+service network restart
