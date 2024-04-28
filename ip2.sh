@@ -16,7 +16,7 @@ if ip link show eth0 &> /dev/null; then
     IPV6_DEFROUTE=yes
     IPV6_FAILURE_FATAL=no
     IPV6_ADDR_GEN_MODE=eui64
-    IPADDR=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1')
+    IPADDR=$(read -p "Nhap IPv4: " IP4; echo $IP4)
     NETMASK=255.255.255.0
     GATEWAY=192.168.1.1
     DNS1=8.8.8.8
@@ -32,7 +32,7 @@ EOF
     fi
 
     # Cấp quyền cho địa chỉ IPv4 của eth0
-    firewall-cmd --zone=public --add-source=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1') --permanent
+    firewall-cmd --zone=public --add-source="$IP4" --permanent
     firewall-cmd --reload
 
 # Kiểm tra card mạng ens33
@@ -51,7 +51,7 @@ elif ip link show ens33 &> /dev/null; then
     IPV6_DEFROUTE=yes
     IPV6_FAILURE_FATAL=no
     IPV6_ADDR_GEN_MODE=eui64
-    IPADDR=$(ip addr show ens33 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1')
+    IPADDR=$(read -p "Nhap IPv4: " IP4; echo $IP4)
     NETMASK=255.255.255.0
     GATEWAY=192.168.1.1
     DNS1=8.8.8.8
@@ -61,20 +61,15 @@ EOF
 
     # Kiểm tra kết nối IPv6
     if ip -6 route get 2001:ee0:4f9b:92b0::8888 &> /dev/null; then
-        echo "Kết nối IPv6 cho ens33 hoạt động."
+        echo "Kết nối IPv6 cho eth0 hoạt động."
     else
-        echo "Lỗi: Kết nối IPv6 cho ens33 không hoạt động."
+        echo "Lỗi: Kết nối IPv6 cho eth0 không hoạt động."
     fi
 
     # Cấp quyền cho địa chỉ IPv4 của ens33
-    firewall-cmd --zone=public --add-source=$(ip addr show ens33 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v '127.0.0.1') --permanent
-    firewall-cmd --reload 
-
-else
-    echo "Không tìm thấy card mạng eth0 hoặc ens33."
-fi
-
-# Khởi động lại dịch vụ mạng
+    firewall-cmd --zone=public --add-source="$IP4" --permanent
+    firewall-cmd --reload
+    
 sudo systemctl restart network
 
 ping_google6() {
