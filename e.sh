@@ -61,7 +61,7 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir -p $WORKDIR && cd $_ || exit 1
 IP6=$(echo "$IP6" | cut -f1-4 -d':')
-echo "Internal IP = $IP4. External subnet for IPv6 = $IP6"
+echo "Internal IP = $IP4. External subnet for IPv6 = $IP6/64"
 
 # Tạo dữ liệu proxy
 echo "Generating proxy data..."
@@ -149,7 +149,7 @@ sudo systemctl enable rc-local
 sudo /etc/rc.local
 
 echo "Starting Proxy"
-download_proxy
+
 # Kiểm tra tổng số lượng địa chỉ IPv6
 ip -6 addr | grep inet6 | wc -l
 
@@ -192,4 +192,12 @@ firewall-cmd --reload
 firewall-cmd --zone=public --add-source="$IP4" --permanent
 firewall-cmd --zone=public --add-source="::1" --permanent
 firewall-cmd --reload
+
+firewall-cmd --zone=public --add-source="$IP4" --permanent
+firewall-cmd --zone=public --add-source="$IP6" --permanent
+firewall-cmd --reload
+
+# Hiển thị số lượng địa chỉ IPv6 hiện tại
+echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
+download_proxy
