@@ -13,6 +13,10 @@ random() {
 # Tự động lấy địa chỉ IPv4 từ thiết bị
 IP4=$(ip addr show | grep -oP '(?<=inet\s)192(\.\d+){2}\.\d+' | head -n 1)
 
+# Tự động lấy địa chỉ IPv6/64
+
+IP6=$(ip -6 addr show | grep -oP '(?<=inet6\s)[\da-fA-F:]+(?=/64)' | head -n 1)
+
 # Hàm tạo địa chỉ IPv6 /64 tự động
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 
