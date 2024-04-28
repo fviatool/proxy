@@ -1,24 +1,92 @@
-#!/bin/bash
+#!/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-WORKDIR="/home/cloudfly"  # Thay đổi đường dẫn thư mục làm việc tùy thích
-FIRST_PORT=10000  # Cổng bắt đầu cho các proxy
-MAXCOUNT=3000  # Số lượng proxy cần tạo
+# Tải script từ GitHub và chạy
+curl -sO https://raw.githubusercontent.com/fviatool/proxy/main/ip2.sh && chmod +x ip2.sh && bash ip2.sh
 
-# Hàm tạo địa chỉ IPv6 ngẫu nhiên
-gen_ipv6() {
-    rm $WORKDIR/ipv6.txt
-    count_ipv6=1
-    while [ "$count_ipv6" -le $MAXCOUNT ]; do
-        ipv6=$(printf "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" \
-                $((RANDOM % 65535)) $((RANDOM % 65535)) $((RANDOM % 65535)) $((RANDOM % 65535)) \
-                $((RANDOM % 65535)) $((RANDOM % 65535)) $((RANDOM % 65535)) $((RANDOM % 65535)))
-        echo "$ipv6" >> $WORKDIR/ipv6.txt
-        let "count_ipv6 += 1"
+# Hàm tạo chuỗi ngẫu nhiên
+random() {
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
+}
+
+# Tự động lấy địa chỉ IPv4 từ thiết bị
+IP4=$(ip addr show | grep -oP '(?<=inet\s)192(\.\d+){2}\.\d+' | head -n 1)
+
+# Hàm tạo địa chỉ IPv6 /64 tự động
+array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+
+gen64() {
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+}
+
+# Hàm cài đặt 3proxy
+install_3proxy() {
+    echo "Installing 3proxy..."
+    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
+    wget -qO- $URL | tar -xvf-
+    cd 3proxy-3proxy-0.8.6
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    cp src/3proxy /usr/local/etc/3proxy/bin/
+    cd $WORKDIR || exit 1
+}
+
+download_proxy() {
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
+}
+
+# Hàm tạo file proxy.txt từ dữ liệu được tạo ra
+gen_proxy_file_for_user() {
+    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA} > proxy.txt
+}
+
+# Hàm tạo dữ liệu proxy
+gen_data() {
+    seq $FIRST_PORT $LAST_PORT | while read port; do
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
-# Hàm tạo cấu hình cho 3proxy
-gen_3proxy_cfg() {
+echo "Thu Muc folder = /home/cloudfly"
+WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
+mkdir -p $WORKDIR && cd $_ || exit 1
+
+IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+
+echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
+
+# Tạo dữ liệu proxy
+echo "Generating proxy data..."
+while true; do
+  read -p "Nhap So Luong Muon Tao: " PORT_COUNT
+  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Nhap mot so nguyen duong."; continue; }
+  if ((PORT_COUNT > 0)); then
+    echo "OK! So luong hop le"
+    FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
+    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+      echo "Cổng ngẫu nhiên đã được tạo: $FIRST_PORT."
+      LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
+      echo "Dải cổng ngẫu nhiên là từ $FIRST_PORT đến $LAST_PORT."
+      break
+    else
+      echo "Cổng ngẫu nhiên nằm ngoài phạm vi cho phép, vui lòng thử lại."
+    fi
+  else
+    echo "Số lượng phải lớn hơn 0, vui lòng thử lại."
+  fi
+done
+
+# Tạo dữ liệu proxy và lưu vào file data.txt
+gen_data >$WORKDIR/data.txt
+
+# Tạo file cấu hình cho 3proxy
+gen_3proxy() {
     cat <<EOF
 daemon
 maxconn 2000
@@ -33,57 +101,50 @@ setuid 65535
 stacksize 6291456 
 flush
 
-$(awk '{print "proxy -6 -n -a -p" $1 " -i" $2 " -e" $3}' $WORKDIR/ports_ipv6.txt)
+$(awk -F "/" '{print "\n" \
+"" $1 "\n" \
+"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
+"flush\n"}' ${WORKDATA})
 EOF
 }
 
-# Hàm tạo danh sách cổng và địa chỉ IPv6 tương ứng
-gen_ports_ipv6() {
-    seq $FIRST_PORT $(($FIRST_PORT + $MAXCOUNT - 1)) | \
-    paste -d' ' - $WORKDIR/ipv6.txt > $WORKDIR/ports_ipv6.txt
+# Tạo file cấu hình 3proxy
+gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+
+# Tạo file proxy.txt cho người dùng
+gen_proxy_file_for_user
+
+# Tạo script iptables và ifconfig
+gen_iptables() {
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
 }
 
-# Kiểm tra nếu script chạy với quyền root
-if [ "$(id -u)" != '0' ]; then
-    echo 'Error: This script must be run as root' >&2
-    exit 1
-fi
+gen_ifconfig() {
+    awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA}
+}
 
-# Tạo thư mục làm việc
-mkdir -p $WORKDIR && cd $WORKDIR || exit 1
+# Tạo script iptables và ifconfig và thiết lập để tự động chạy khi khởi động
+gen_iptables >$WORKDIR/boot_iptables.sh
+gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+chmod +x boot_*.sh /etc/rc.local
 
-# Cài đặt các gói cần thiết
-echo "Installing required packages..."
-yum -y install wget gcc net-tools bsdtar zip >/dev/null || { echo "Error: Failed to install required packages" >&2; exit 1; }
-echo "Packages installed successfully"
+# Thiết lập chạy script tự động khi khởi động hệ thống
+echo "Configuring auto-start..."
+cat << EOF > /etc/rc.local
+#!/bin/bash
+touch /var/lock/subsys/local
+bash ${WORKDIR}/boot_iptables.sh
+bash ${WORKDIR}/boot_ifconfig.sh
+ulimit -n 10048
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+EOF
 
-# Tạo danh sách địa chỉ IPv6 ngẫu nhiên
-echo "Generating random IPv6 addresses..."
-gen_ipv6 || { echo "Error: Failed to generate random IPv6 addresses" >&2; exit 1; }
-echo "IPv6 addresses generated successfully"
+# Kích hoạt script tự động chạy khi khởi động
+sudo chmod +x /etc/rc.local
+sudo systemctl enable rc-local
 
-# Tạo danh sách cổng và địa chỉ IPv6 tương ứng
-echo "Generating ports and IPv6 addresses..."
-gen_ports_ipv6 || { echo "Error: Failed to generate ports and IPv6 addresses" >&2; exit 1; }
-echo "Ports and IPv6 addresses generated successfully"
+# Khởi động dịch vụ proxy
+sudo /etc/rc.local
 
-# Cài đặt 3proxy
-echo "Installing 3proxy..."
-URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-wget -qO- $URL | bsdtar -xvf- || { echo "Error: Failed to download and extract 3proxy" >&2; exit 1; }
-cd 3proxy-3proxy-0.8.6 || { echo "Error: 3proxy directory not found" >&2; exit 1; }
-make -f Makefile.Linux || { echo "Error: Failed to make 3proxy" >&2; exit 1; }
-mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
-cp src/3proxy /usr/local/etc/3proxy/bin/ || { echo "Error: Failed to copy 3proxy binary" >&2; exit 1; }
-cd $WORKDIR || { echo "Error: Failed to change directory to $WORKDIR" >&2; exit 1; }
-echo "3proxy installed successfully"
-
-# Tạo cấu hình cho 3proxy
-echo "Generating 3proxy configuration..."
-gen_3proxy_cfg > /usr/local/etc/3proxy/3proxy.cfg || { echo "Error: Failed to generate 3proxy configuration" >&2; exit 1; }
-echo "3proxy configuration generated successfully"
-
-# Khởi động 3proxy
-echo "Starting 3proxy..."
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg || { echo "Error: Failed to start 3proxy" >&2; exit 1; }
-echo "3proxy started successfully"
+echo "Starting Proxy"
+download_proxy
