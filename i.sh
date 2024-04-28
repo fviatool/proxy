@@ -110,6 +110,8 @@ ip -6 addr | grep inet6 | wc -l
 
 # Kiểm tra kết nối IPv6 bằng cách ping Google
 ping_google6
+
 ifconfig
 
-reboot
+ip addr show
+systemctl status networking
