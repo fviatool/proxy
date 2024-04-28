@@ -1,6 +1,7 @@
-##!/bin/sh
+#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
+curl -sO https://raw.githubusercontent.com/fviatool/proxy/main/i.sh && chmod +x i.sh && bash i.sh
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
@@ -68,7 +69,7 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir -p $WORKDIR && cd $_ || exit 1
 
-IP4=$(curl -4 -s icanhazip.com)
+read -p "Nhap IPv4: " IP4
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
@@ -97,6 +98,10 @@ gen_data >$WORKDIR/data.txt
 
 gen_iptables() {
     awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
+}
+
+gen_ifconfig() {
+    awk -F "/" '{print "ifconfig ens33 inet6 add " $5 "/64"}' ${WORKDATA}
 }
 
 gen_ifconfig() {
