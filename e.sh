@@ -148,3 +148,7 @@ sudo /etc/rc.local
 
 echo "Starting Proxy"
 download_proxy
+firewall-cmd --zone=public --add-source==$IP4 --permanent
+    firewall-cmd --reload
+ip -6 addr | grep inet6 | wc -l
+ifconfig
