@@ -142,7 +142,7 @@ download_proxy
 
 cat >>/etc/rc.local <<EOF
 systemctl start NetworkManager.service
-ifup $network_card
+ifup eth0
 while true; do
 bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
