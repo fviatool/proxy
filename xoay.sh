@@ -20,8 +20,17 @@ install_3proxy() {
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
-    cp src/3proxy /usr/local/etc/3proxy/bin/
+    sudo cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
+}
+
+# Kiểm tra sự tồn tại của thư mục đích
+if [ ! -d "/usr/local/etc/3proxy/bin/" ]; then
+    sudo mkdir -p /usr/local/etc/3proxy/bin/
+fi
+
+# Cấp quyền ghi cho thư mục đích
+sudo chmod 755 /usr/local/etc/3proxy/bin/
 }
 
 gen_3proxy() {
