@@ -24,7 +24,7 @@ get_network_card() {
 
 # Hàm lấy địa chỉ IPv6
 get_ipv6_address() {
-    IPV6ADDR=$(ip -6 addr show | grep -oP '(?<=inet6\s)[\da-fA-F:]+(?=/64)' | head -n 1)
+    IP6=$(ip -6 addr show | grep -oP '(?<=inet6\s)[\da-fA-F:]+(?=/64)' | head -n 1)
 }
 
 # Hàm cài đặt 3proxy
@@ -132,9 +132,9 @@ WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+IP6=$(echo "$IP6" | cut -f1-4 -d':')
 
-echo "IP nội bộ = ${IP4}. Dải IP ngoại vi cho IPv6 = ${IPV6ADDR}"
+echo "IP nội bộ = ${IP4}. Dải IP ngoại vi cho IPv6 = ${IPV6}"
 
 # Generate random ports
 while :; do
