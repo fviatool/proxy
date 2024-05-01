@@ -2,33 +2,26 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
-    tr </dev/urandom -dc A-Za-z0-9 | head -c5
-    echo
+	tr </dev/urandom -dc A-Za-z0-9 | head -c5
+	echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-    ip64() {
-        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-    }
-    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+	ip64() {
+		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+	}
+	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
 install_3proxy() {
-    echo "Installing 3proxy"
+    echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
-    # Kiểm tra và tạo thư mục nếu chưa tồn tại
-    if [ ! -d "/usr/local/etc/3proxy/bin/" ]; then
-        sudo mkdir -p /usr/local/etc/3proxy/bin/
-    fi
-    # Cấp quyền ghi cho thư mục đích
-    sudo chmod 755 /usr/local/etc/3proxy/bin/
-    # Sao chép tệp 3proxy vào thư mục đích
-    sudo cp src/3proxy /usr/local/etc/3proxy/bin/
+    cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
 }
 
@@ -69,7 +62,7 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " "0x" $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA})
+    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
@@ -92,6 +85,14 @@ EOF
 echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
+# Kiểm tra sự tồn tại của thư mục đích và tạo nếu cần
+if [ ! -d "/usr/local/etc/3proxy/bin/" ]; then
+    mkdir -p /usr/local/etc/3proxy/bin/
+fi
+
+# Sao chép tệp 3proxy vào thư mục đích
+cp src/3proxy /usr/local/etc/3proxy/bin/
+
 install_3proxy
 
 echo "working folder = /home/cloudfly"
@@ -104,31 +105,28 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-while true; do
-    read -p "Nhap So Luong Muon Tao: " PORT_COUNT
-    [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Nhap mot so nguyen duong."; continue; }
-    if ((PORT_COUNT > 0)); then
-        echo "OK! So luong hop le"
-        FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-        if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-            echo "Cổng ngẫu nhiên đã được tạo: $FIRST_PORT."
-            LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-            echo "Dải cổng ngẫu nhiên là từ $FIRST_PORT đến $LAST_PORT."
-            break
-        else
-            echo "Cổng ngẫu nhiên nằm ngoài phạm vi cho phép, vui lòng thử lại."
-        fi
-    else
-        echo "Số lượng phải lớn hơn 0, vui lòng thử lại."
-    fi
-done
+PORT_COUNT=100  # Số lượng cổng muốn tạo tự động
 
-get_ipv6_address
+if [[ $PORT_COUNT =~ ^[0-9]+$ ]] && ((PORT_COUNT > 0)); then
+    echo "OK! Valid quantity entered: $PORT_COUNT"
+    FIRST_PORT=$((RANDOM % 70001 + 10000))
+    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+        echo "Random port generated: $FIRST_PORT."
+        LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
+        echo "The random port range is from $FIRST_PORT to $LAST_PORT."
+    else
+        echo "The randomly generated port is out of range, please try again."
+    fi
+else
+    echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
+fi
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x boot_*.sh /etc/rc.local
+chmod +x $WORKDIR/boot_*.sh /etc/rc.local
+
+Generate 3proxy configuration file
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
@@ -144,6 +142,8 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo "Starting Proxy"
+echo “Starting Proxy”
+
+download_proxy
 
 ip -6 addr | grep inet6 | wc -l
