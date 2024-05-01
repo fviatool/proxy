@@ -2,16 +2,16 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
 install_3proxy() {
@@ -53,45 +53,46 @@ $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
-
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
-gen_iptables() {
-    cat <<EOF
-    $(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
+# Thêm quy tắc iptables
+function add_iptables_rule() {
+    local chain="$1"
+    local protocol="$2"
+    local port="$3"
+
+    # Kiểm tra xem quy tắc đã tồn tại chưa
+    iptables -C $chain -p $protocol --dport $port -j ACCEPT &> /dev/null
+    if [ $? -ne 0 ]; then
+        # Thêm quy tắc mới nếu chưa tồn tại
+        iptables -w 5 -I $chain -p $protocol --dport $port -j ACCEPT
+        echo "Added rule to $chain chain for $protocol port $port"
+    else
+        echo "Rule already exists in $chain chain for $protocol port $port"
+    fi
 }
 
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
+# Xóa quy tắc iptables
+function delete_iptables_rule() {
+    local chain="$1"
+    local protocol="$2"
+    local port="$3"
+
+    # Xóa quy tắc nếu tồn tại
+    iptables -D $chain -p $protocol --dport $port -j ACCEPT &> /dev/null
+    if [ $? -eq 0 ]; then
+        echo "Deleted rule from $chain chain for $protocol port $port"
+    else
+        echo "Rule does not exist in $chain chain for $protocol port $port"
+    fi
 }
 
-download_proxy() {
-    cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://file.io
-}
-
-cat << EOF > /etc/rc.d/rc.local
-#!/bin/bash
-touch /var/lock/subsys/local
-EOF
-
-echo "installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
-
-# Kiểm tra sự tồn tại của thư mục đích và tạo nếu cần
-if [ ! -d "/usr/local/etc/3proxy/bin/" ]; then
-    mkdir -p /usr/local/etc/3proxy/bin/
-fi
-
-# Sao chép tệp 3proxy vào thư mục đích
-cp src/3proxy /usr/local/etc/3proxy/bin/
+# Thêm quy tắc iptables tự động
+add_iptables_rule "INPUT" "tcp" "$port"
 
 install_3proxy
 
@@ -105,23 +106,23 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-PORT_COUNT=100  # Số lượng cổng muốn tạo tự động
+PORT_COUNT=1000  # Số lượng cổng muốn tạo tự động
 MAX_PORT=65535
 
 if [[ $PORT_COUNT =~ ^[0-9]+$ ]] && ((PORT_COUNT > 0)); then
-    echo "OK! Valid quantity entered: $PORT_COUNT"
-    FIRST_PORT=$((RANDOM % MAX_PORT))
-    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 0 && FIRST_PORT <= MAX_PORT)); then
-        echo "Random port generated: $FIRST_PORT."
-        LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-        echo "The random port range is from $FIRST_PORT to $LAST_PORT."
-    else
-        echo "The randomly generated port is out of range, please try again."
-    fi
+echo “OK! Valid quantity entered: $PORT_COUNT”
+FIRST_PORT=$((RANDOM % MAX_PORT))
+if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 0 && FIRST_PORT <= MAX_PORT)); then
+echo “Random port generated: $FIRST_PORT.”
+LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
+echo “The random port range is from $FIRST_PORT to $LAST_PORT.”
 else
-    echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
+echo “The randomly generated port is out of range, please try again.”
 fi
-
+else
+echo “Invalid quantity entered: $PORT_COUNT. Please enter a positive integer.”
+fi
+done
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
