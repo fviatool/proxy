@@ -1,6 +1,12 @@
 #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
+sudo service 3proxy stop
+sudo service iptables restart
+sudo /etc/init.d/iptables restart
+sudo systemctl restart iptables
+sudo systemctl restart firewalld
+
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
@@ -108,10 +114,6 @@ if [[ $PORT_COUNT =~ ^[0-9]+$ ]] && ((PORT_COUNT > 0)); then
 else
     echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
 fi
-
-sudo service iptables restart
-sudo systemctl restart iptables
-sudo systemctl restart firewalld
 
 gen_data >$WORKDIR/data.txt
 # Tạo tệp cấu hình cho 3proxy
