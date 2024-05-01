@@ -149,39 +149,38 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
 
-# Kiểm tra và xuất thông tin về IPv4 và IPv6
-check_all_ips() {
-    while IFS= read -r line; do
-        ipv4=$(echo "$line" | cut -d '/' -f 1)
-        port=$(echo "$line" | cut -d '/' -f 2)
-        ipv6=$(echo "$line" | cut -d '/' -f 3)
-        echo "Checking IPv4: $ipv4"
-        ping -c 3 $ipv4 > /dev/null 2>&1
-        if [ $? -eq 0 ]; then
-            echo "$ipv4 is live"
-            if [ -n "$ipv6" ]; then
-                echo "Checking IPv6: $ipv6"
-                ping6 -c 3 $ipv6 > /dev/null 2>&1
-                if [ $? -eq 0 ]; then
-                    echo "$ipv6 is live"
-                    echo "$ipv4:$port->$ipv6"
-                else
-                    echo "$ipv6 is not live"
-                fi
-            fi
-        else
-            echo "$ipv4 is not live"
-        fi
-        echo "-----------------------------------"
-    done < /home/cloudfly/data.txt
+check_ipv6_live() {
+    local ipv6_address=$1
+    ping6 -c 3 $ipv6_address
 }
 
-# Xuất số lượng địa chỉ IPv6 hiện tại
+# Sử dụng hàm để kiểm tra tính sống của một địa chỉ IPv6 cụ thể
+check_all_ipv6_live() {
+    ip -6 addr | grep inet6 | while read -r line; do
+        address=$(echo "$line" | awk '{print $2}')
+        ip6=$(echo "$address" | cut -d'/' -f1)
+        ping6 -c 1 $ip6 > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "IPv4: $IP4:Port: $port -> IPv6: $ip6 Live"
+        else
+            echo "$ip6 is not live"
+        fi
+    done
+}
+
+check_all_ipv6_live
+check_all_ips
+
+check_all_ips() {
+    while IFS= read -r line; do
+        ipv6=$(echo "$line" | cut -d '/' -f 5)
+        echo "Checking IPv6: $ipv6"
+        ping6 -c 3 $ipv6
+        echo "-----------------------------------"
+    done < /home/cloudfly/data.txt
+    
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
-
-# Kiểm tra tất cả các địa chỉ IP
-check_all_ips
 
 # Tải xuống tệp proxy
 download_proxy
