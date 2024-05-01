@@ -72,10 +72,6 @@ gen_iptables() {
 EOF
 }
 
-wait_before_iptables() {
-    sleep 5  # Chờ 5 giây trước khi thực hiện iptables
-}
-
 # Thêm quy tắc iptables
 function add_iptables_rule() {
     local chain="$1"
