@@ -148,3 +148,16 @@ echo “Starting Proxy”
 download_proxy
 
 ip -6 addr | grep inet6 | wc -l
+
+check_ipv4_and_ipv6_live() {
+    IPV4_ADDRESS="IPV4_ADDRESS"
+    PORT="PORT"
+    IPV6_ADDRESS=$(ping6 -6 -c 1 $IPV4_ADDRESS | grep "from" | awk '{print $4}' | cut -d ':' -f1)
+    if [ -n "$IPV6_ADDRESS" ]; then
+        echo "IPv4 $IPV4_ADDRESS and its corresponding IPv6 $IPV6_ADDRESS on port $PORT are live"
+    else
+        echo "IPv4 $IPV4_ADDRESS is live on port $PORT but no corresponding IPv6 address"
+    fi
+}
+check_ipv4_and_ipv6_live
+download_proxy
