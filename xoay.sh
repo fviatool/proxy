@@ -93,7 +93,12 @@ function add_iptables_rule() {
         echo "Rule already exists in $chain chain for $protocol port $port"
     fi
 }
-p
+# Gọi hàm gen_iptables và thực thi kết quả
+gen_iptables | bash
+
+# Gọi hàm add_iptables_rule để thêm quy tắc iptables
+add_iptables_rule "INPUT" "tcp" "80"
+
 echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
