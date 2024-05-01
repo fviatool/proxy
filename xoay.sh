@@ -61,13 +61,13 @@ gen_data() {
 
 # Thêm một hàm để chờ một khoảng thời gian trước khi thực hiện lệnh iptables
 wait_before_iptables() {
-    sleep 5  # Chờ 5 giây trước khi thực hiện iptables
+    sleep 0  # Chờ 5 giây trước khi thực hiện iptables
 }
 
 # Định nghĩa hàm gen_iptables
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -w 0 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
