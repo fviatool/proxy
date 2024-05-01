@@ -13,24 +13,23 @@ gen64() {
     }
     echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    # Kiểm tra và tạo thư mục nếu chưa tồn tại
+    if [ ! -d "/usr/local/etc/3proxy/bin/" ]; then
+        sudo mkdir -p /usr/local/etc/3proxy/bin/
+    fi
+    # Cấp quyền ghi cho thư mục đích
+    sudo chmod 755 /usr/local/etc/3proxy/bin/
+    # Sao chép tệp 3proxy vào thư mục đích
     sudo cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
-}
-
-# Kiểm tra sự tồn tại của thư mục đích
-if [ ! -d "/usr/local/etc/3proxy/bin/" ]; then
-    sudo mkdir -p /usr/local/etc/3proxy/bin/
-fi
-
-# Cấp quyền ghi cho thư mục đích
-sudo chmod 755 /usr/local/etc/3proxy/bin/
 }
 
 gen_3proxy() {
