@@ -61,7 +61,7 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA} | sed 's/\([0-9]\+\)/0x\1/')
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " "0x" $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA})
 EOF
 }
 
@@ -122,7 +122,7 @@ gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x boot_*.sh /etc/rc.local
 
-#gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
@@ -138,19 +138,4 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
 
-download_proxy
-
-cat >>/etc/rc.local <<EOF
-systemctl start NetworkManager.service
-ifup eth0
-while true; do
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
-ulimit -n 65535
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
-sleep 600  # Chờ 10 phút trước khi chạy lại để xoay IPv6
-done
-EOF
-
-bash /etc/rc.local
 ip -6 addr | grep inet6 | wc -l
