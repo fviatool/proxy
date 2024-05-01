@@ -10,6 +10,7 @@ sudo systemctl restart firewalld
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
+    
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
@@ -65,7 +66,12 @@ gen_data() {
     done
 }
 
-# Thêm một hàm để chờ một khoảng thời gian trước khi thực hiện lệnh iptables
+gen_iptables() {
+    cat <<EOF
+    $(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+EOF
+}
+
 wait_before_iptables() {
     sleep 5  # Chờ 5 giây trước khi thực hiện iptables
 }
