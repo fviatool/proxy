@@ -106,11 +106,12 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
 PORT_COUNT=100  # Số lượng cổng muốn tạo tự động
+MAX_PORT=65535
 
 if [[ $PORT_COUNT =~ ^[0-9]+$ ]] && ((PORT_COUNT > 0)); then
     echo "OK! Valid quantity entered: $PORT_COUNT"
-    FIRST_PORT=$((RANDOM % 70001 + 10000))
-    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+    FIRST_PORT=$((RANDOM % MAX_PORT))
+    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 0 && FIRST_PORT <= MAX_PORT)); then
         echo "Random port generated: $FIRST_PORT."
         LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
         echo "The random port range is from $FIRST_PORT to $LAST_PORT."
