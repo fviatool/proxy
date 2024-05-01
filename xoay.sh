@@ -172,5 +172,5 @@ check_all_ips() {
 }
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
-
+check_all_ips
 download_proxy
