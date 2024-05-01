@@ -1,21 +1,17 @@
 #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-get_network_card() {
-    network_card=$(ip -o link show | awk '$2 !~ "lo|vir|wl" {print $2}' | cut -d: -f2 | head -1)
-}
-
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 install_3proxy() {
     echo "installing 3proxy"
@@ -25,9 +21,6 @@ install_3proxy() {
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    #cp ./scripts/rc.d/proxy.sh /etc/init.d/3proxy
-    #chmod +x /etc/init.d/3proxy
-    #chkconfig 3proxy on
     cd $WORKDIR
 }
 
@@ -68,13 +61,13 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA} | sed 's/\([0-9]\+\)/0x\1/')
 EOF
 }
 
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ifconfig $network_card inet6 add " $5 "/64"}' ${WORKDATA})
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
@@ -101,26 +94,28 @@ mkdir $WORKDIR && cd $_
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
+echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
 while true; do
-  read -p "Nhap So Luong Muon Tao: " PORT_COUNT
-  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Nhap mot so nguyen duong."; continue; }
-  if ((PORT_COUNT > 0)); then
-    echo "OK! So luong hop le"
-    FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-      echo "Cổng ngẫu nhiên đã được tạo: $FIRST_PORT."
-      LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-      echo "Dải cổng ngẫu nhiên là từ $FIRST_PORT đến $LAST_PORT."
-      break
+    read -p "Nhap So Luong Muon Tao: " PORT_COUNT
+    [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Nhap mot so nguyen duong."; continue; }
+    if ((PORT_COUNT > 0)); then
+        echo "OK! So luong hop le"
+        FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
+        if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
+            echo "Cổng ngẫu nhiên đã được tạo: $FIRST_PORT."
+            LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
+            echo "Dải cổng ngẫu nhiên là từ $FIRST_PORT đến $LAST_PORT."
+            break
+        else
+            echo "Cổng ngẫu nhiên nằm ngoài phạm vi cho phép, vui lòng thử lại."
+        fi
     else
-      echo "Cổng ngẫu nhiên nằm ngoài phạm vi cho phép, vui lòng thử lại."
+        echo "Số lượng phải lớn hơn 0, vui lòng thử lại."
     fi
-  else
-    echo "Số lượng phải lớn hơn 0, vui lòng thử lại."
-  fi
 done
+
+get_ipv6_address
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
@@ -158,3 +153,4 @@ done
 EOF
 
 bash /etc/rc.local
+ip -6 addr | grep inet6 | wc -l
