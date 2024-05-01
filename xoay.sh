@@ -19,12 +19,12 @@ gen64() {
 
 # Hàm lấy tên card mạng
 get_network_card() {
-    network_card=$(ip -o link show | awk '$2 !~ "lo|vir|wl" {print $2}' | cut -d: -f1 | head -1)
+    network_card=$(ip -o link show | awk '$2 !~ "lo|vir|wl" {print $2}' | cut -d: -f2 | head -1)
 }
 
 # Hàm lấy địa chỉ IPv6
 get_ipv6_address() {
-    IP6=$(ip -6 addr show | grep -oP '(?<=inet6\s)[\da-fA-F:]+(?=/64)' | head -n 1)
+    IP6=$(ip -6 addr show dev $network_card | awk '/inet6/ {print $2}' | grep -v -E "^fe80" | awk -F'/' '{print $1}')
 }
 
 # Hàm cài đặt 3proxy
@@ -142,11 +142,11 @@ while :; do
   if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
     echo "Random ports generated successfully!"
     LAST_PORT=$((FIRST_PORT + 999))
-    echo "LAST_PORT is $LAST_PORT. Continuing..."
-    break
-  else
-    echo "Failed to generate random ports. Retrying..."
-  fi
+    echo "LAST_PORT is $LAST_PORT. Continuing…”
+break
+else
+echo “Failed to generate random ports. Retrying…”
+fi
 done
 
 gen_data >$WORKDIR/data.txt
@@ -160,11 +160,11 @@ cat >>/etc/rc.local <<EOF
 systemctl start NetworkManager.service
 ifup $network_card
 while true; do
-    bash ${WORKDIR}/boot_iptables.sh
-    bash ${WORKDIR}/boot_ifconfig.sh
-    ulimit -n 65535
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
-    sleep 600  # Chờ 10 phút trước khi chạy lại để xoay IPv6
+bash ${WORKDIR}/boot_iptables.sh
+bash ${WORKDIR}/boot_ifconfig.sh
+ulimit -n 65535
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+sleep 600  # Chờ 10 phút trước khi chạy lại để xoay IPv6
 done
 EOF
 
