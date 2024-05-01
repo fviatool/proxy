@@ -15,7 +15,7 @@ gen64() {
 }
 
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -91,12 +91,9 @@ function delete_iptables_rule() {
     fi
 }
 
-# Thêm quy tắc iptables tự động
-add_iptables_rule "INPUT" "tcp" "$port"
-
 install_3proxy
 
-echo "working folder = /home/cloudfly"
+echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
@@ -110,25 +107,20 @@ PORT_COUNT=1000  # Số lượng cổng muốn tạo tự động
 MAX_PORT=65535
 
 if [[ $PORT_COUNT =~ ^[0-9]+$ ]] && ((PORT_COUNT > 0)); then
-echo “OK! Valid quantity entered: $PORT_COUNT”
-FIRST_PORT=$((RANDOM % MAX_PORT))
-if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 0 && FIRST_PORT <= MAX_PORT)); then
-echo “Random port generated: $FIRST_PORT.”
-LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-echo “The random port range is from $FIRST_PORT to $LAST_PORT.”
+    echo "OK! Valid quantity entered: $PORT_COUNT"
+    FIRST_PORT=$((RANDOM % MAX_PORT))
+    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 0 && FIRST_PORT <= MAX_PORT)); then
+        echo "Random port generated: $FIRST_PORT."
+        LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
+        echo "The random port range is from $FIRST_PORT to $LAST_PORT."
+    else
+        echo "The randomly generated port is out of range, please try again."
+    fi
 else
-echo “The randomly generated port is out of range, please try again.”
+    echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
 fi
-else
-echo “Invalid quantity entered: $PORT_COUNT. Please enter a positive integer.”
-fi
-done
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
-# Tạo tệp cấu hình cho 3proxy
+gen_data >$WORKDIR/data.txt
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 # Thêm lệnh vào rc.local để khởi động các thiết lập khi hệ thống khởi động
@@ -173,15 +165,16 @@ check_all_ipv6_live
 check_all_ips
 
 check_all_ips() {
-    while IFS= read -r line; do
-        ipv6=$(echo "$line" | cut -d '/' -f 5)
-        echo "Checking IPv6: $ipv6"
-        ping6 -c 3 $ipv6
-        echo "-----------------------------------"
-    done < /home/cloudfly/data.txt
-    
-echo "Số lượng địa chỉ IPv6 hiện tại:"
+while IFS= read -r line; do
+ipv6=$(echo “$line” | cut -d ‘/’ -f 5)
+echo “Checking IPv6: $ipv6”
+ping6 -c 3 $ipv6
+echo “———————————–”
+done < /home/cloudfly/data.txt
+
+echo “Số lượng địa chỉ IPv6 hiện tại:”
 ip -6 addr | grep inet6 | wc -l
 
-# Tải xuống tệp proxy
+Tải xuống tệp proxy
+
 download_proxy
