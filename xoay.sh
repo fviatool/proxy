@@ -165,13 +165,13 @@ check_all_ipv6_live
 check_all_ips
 
 check_all_ips() {
-while IFS= read -r line; do
-ipv6=$(echo “$line” | cut -d ‘/’ -f 5)
-echo “Checking IPv6: $ipv6”
-ping6 -c 3 $ipv6
-echo “———————————–”
-done < /home/cloudfly/data.txt
-
+    while IFS= read -r line; do
+        ipv6=$(echo "$line" | cut -d '/' -f 5)
+        echo "Checking IPv6: $ipv6"
+        ping6 -c 3 $ipv6
+        echo "-----------------------------------"
+    done < /home/cloudfly/data.txt
+}
 echo “Số lượng địa chỉ IPv6 hiện tại:”
 ip -6 addr | grep inet6 | wc -l
 
