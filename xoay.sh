@@ -66,11 +66,15 @@ gen_data() {
     done
 }
 
+# Định nghĩa hàm gen_iptables
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
+
+# Gọi hàm và thực thi kết quả trả về
+gen_iptables | bash
 
 # Thêm quy tắc iptables
 function add_iptables_rule() {
@@ -89,7 +93,7 @@ function add_iptables_rule() {
         echo "Rule already exists in $chain chain for $protocol port $port"
     fi
 }
-
+p
 echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
