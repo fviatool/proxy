@@ -62,7 +62,7 @@ gen_data() {
 
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -w I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+    $(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
@@ -127,10 +127,10 @@ gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
-Generate 3proxy configuration file
-
+# Tạo tệp cấu hình cho 3proxy
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
+# Thêm lệnh vào rc.local để khởi động các thiết lập khi hệ thống khởi động
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
@@ -138,13 +138,18 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
+# Thực hiện rc.local
 bash /etc/rc.local
 
+# Tạo tệp proxy cho người dùng
 gen_proxy_file_for_user
+
+# Xóa thư mục tạm
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo “Starting Proxy”
+echo "Starting Proxy"
 
+# Kiểm tra và xuất thông tin về IPv4 và IPv6
 check_all_ips() {
     while IFS= read -r line; do
         ipv4=$(echo "$line" | cut -d '/' -f 1)
@@ -171,9 +176,12 @@ check_all_ips() {
     done < /home/cloudfly/data.txt
 }
 
+# Xuất số lượng địa chỉ IPv6 hiện tại
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
 
+# Kiểm tra tất cả các địa chỉ IP
 check_all_ips
 
+# Tải xuống tệp proxy
 download_proxy
