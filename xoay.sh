@@ -110,6 +110,7 @@ else
 fi
 
 sudo service iptables restart
+sudo systemctl restart iptables
 sudo systemctl restart firewalld
 
 gen_data >$WORKDIR/data.txt
