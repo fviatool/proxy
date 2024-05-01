@@ -109,6 +109,9 @@ else
     echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
 fi
 
+sudo service iptables restart
+sudo systemctl restart firewalld
+
 gen_data >$WORKDIR/data.txt
 # Tạo tệp cấu hình cho 3proxy
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
