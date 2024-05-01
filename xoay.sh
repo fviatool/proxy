@@ -145,13 +145,17 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo “Starting Proxy”
 
-download_proxy
-
 ip -6 addr | grep inet6 | wc -l
 
 check_ipv4_and_ipv6_live() {
-    IPV4_ADDRESS="IPV4_ADDRESS"
-    PORT="PORT"
+    local IPV4_ADDRESS="IPV4_ADDRESS"
+    local PORT="PORT"
+
+    # Kiểm tra IPv4
+    ping -c 1 $IPV4_ADDRESS > /dev/null 2>&1
+    local IPV4_ALIVE=$?
+
+    # Kiểm tra IPv6
     IPV6_ADDRESS=$(ping6 -6 -c 1 $IPV4_ADDRESS | grep "from" | awk '{print $4}' | cut -d ':' -f1)
     if [ -n "$IPV6_ADDRESS" ]; then
         echo "IPv4 $IPV4_ADDRESS and its corresponding IPv6 $IPV6_ADDRESS on port $PORT are live"
@@ -159,5 +163,19 @@ check_ipv4_and_ipv6_live() {
         echo "IPv4 $IPV4_ADDRESS is live on port $PORT but no corresponding IPv6 address"
     fi
 }
-check_ipv4_and_ipv6_live
+
+check_all_ports() {
+    local IP_ADDRESS="IP_ADDRESS"
+    local PORTS_FILE="PORTS_FILE"
+
+    echo "Kiểm tra IPv4 và IPv6 cho tất cả các cổng đã tạo:"
+    while IFS= read -r port; do
+        echo "Kiểm tra cổng $port:"
+        check_ipv4_and_ipv6_live $IP_ADDRESS $port
+        echo "-----------------------------------"
+    done < "$PORTS_FILE"
+}
+
+# Gọi hàm kiểm tra cho tất cả các cổng
+check_all_ports
 download_proxy
