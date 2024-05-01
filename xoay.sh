@@ -1,16 +1,9 @@
 #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-sudo service 3proxy stop
-sudo service iptables restart
-sudo /etc/init.d/iptables restart
-sudo systemctl restart iptables
-sudo systemctl restart firewalld
-
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
-    
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
@@ -66,15 +59,17 @@ gen_data() {
     done
 }
 
+# Thêm một hàm để chờ một khoảng thời gian trước khi thực hiện lệnh iptables
+wait_before_iptables() {
+    sleep 5  # Chờ 5 giây trước khi thực hiện iptables
+}
+
 # Định nghĩa hàm gen_iptables
 gen_iptables() {
     cat <<EOF
 $(awk -F "/" '{print "iptables -w 5 -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
-
-# Gọi hàm và thực thi kết quả trả về
-gen_iptables | bash
 
 # Thêm quy tắc iptables
 function add_iptables_rule() {
@@ -93,11 +88,6 @@ function add_iptables_rule() {
         echo "Rule already exists in $chain chain for $protocol port $port"
     fi
 }
-# Gọi hàm gen_iptables và thực thi kết quả
-gen_iptables | bash
-
-# Gọi hàm add_iptables_rule để thêm quy tắc iptables
-add_iptables_rule "INPUT" "tcp" "80"
 
 echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
@@ -126,7 +116,17 @@ else
     echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
 fi
 
+# Gọi hàm gen_iptables và thực thi kết quả
+gen_iptables | bash
+
+# Gọi hàm add_iptables_rule để thêm quy tắc iptables
+add_iptables_rule "INPUT" "tcp" "80"
+
 gen_data >$WORKDIR/data.txt
+gen_iptables >$WORKDIR/boot_iptables.sh
+gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+chmod +x $WORKDIR/boot_*.sh /etc/rc.local
+
 # Tạo tệp cấu hình cho 3proxy
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
