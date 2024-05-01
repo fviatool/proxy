@@ -59,6 +59,11 @@ gen_data() {
     done
 }
 
+# Thêm một hàm để chờ một khoảng thời gian trước khi thực hiện lệnh iptables
+wait_before_iptables() {
+    sleep 5  # Chờ 5 giây trước khi thực hiện iptables
+}
+
 # Thêm quy tắc iptables
 function add_iptables_rule() {
     local chain="$1"
@@ -69,29 +74,13 @@ function add_iptables_rule() {
     iptables -C $chain -p $protocol --dport $port -j ACCEPT &> /dev/null
     if [ $? -ne 0 ]; then
         # Thêm quy tắc mới nếu chưa tồn tại
-        iptables -w 5 -I $chain -p $protocol --dport $port -j ACCEPT
+        wait_before_iptables
+        iptables -I $chain -p $protocol --dport $port -j ACCEPT
         echo "Added rule to $chain chain for $protocol port $port"
     else
         echo "Rule already exists in $chain chain for $protocol port $port"
     fi
 }
-
-# Xóa quy tắc iptables
-function delete_iptables_rule() {
-    local chain="$1"
-    local protocol="$2"
-    local port="$3"
-
-    # Xóa quy tắc nếu tồn tại
-    iptables -D $chain -p $protocol --dport $port -j ACCEPT &> /dev/null
-    if [ $? -eq 0 ]; then
-        echo "Deleted rule from $chain chain for $protocol port $port"
-    else
-        echo "Rule does not exist in $chain chain for $protocol port $port"
-    fi
-}
-
-install_3proxy
 
 echo "Working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
@@ -121,6 +110,7 @@ else
 fi
 
 gen_data >$WORKDIR/data.txt
+# Tạo tệp cấu hình cho 3proxy
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 # Thêm lệnh vào rc.local để khởi động các thiết lập khi hệ thống khởi động
@@ -168,9 +158,9 @@ check_all_ips() {
     while IFS= read -r line; do
         ipv6=$(echo "$line" | cut -d '/' -f 5)
         echo "Checking IPv6: $ipv6"
-        ping6 -c 3 $ipv6
-        echo "-----------------------------------"
-    done < /home/cloudfly/data.txt
+        ping6 -c 3 $ipv6    echo "-----------------------------------"
+done < /home/cloudfly/data.txt
+
 }
 echo “Số lượng địa chỉ IPv6 hiện tại:”
 ip -6 addr | grep inet6 | wc -l
