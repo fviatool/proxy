@@ -154,14 +154,13 @@ check_ipv6_live() {
     ping6 -c 3 $ipv6_address
 }
 
-# Sử dụng hàm để kiểm tra tính sống của một địa chỉ IPv6 cụ thể
 check_all_ipv6_live() {
     ip -6 addr | grep inet6 | while read -r line; do
         address=$(echo "$line" | awk '{print $2}')
         ip6=$(echo "$address" | cut -d'/' -f1)
         ping6 -c 1 $ip6 > /dev/null 2>&1
         if [ $? -eq 0 ]; then
-            echo "IPv4: $IP4:port: $port -> Live $ip6 "
+            echo "IPv4: $IP4:$port -> Live $ip6"
         else
             echo "$ip6 is not live"
         fi
@@ -172,6 +171,8 @@ check_all_ipv6_live
 
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
+
+check_ipv6_live
 
 # Tải xuống tệp proxy
 download_proxy
