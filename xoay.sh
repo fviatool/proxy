@@ -161,7 +161,7 @@ check_all_ipv6_live() {
         ip6=$(echo "$address" | cut -d'/' -f1)
         ping6 -c 1 $ip6 > /dev/null 2>&1
         if [ $? -eq 0 ]; then
-            echo "IPv4: $IP4:Port: $port -> IPv6: $ip6 Live"
+            echo "IPv4: $IP4:port: $port -> IPv6: $ip6 Live"
         else
             echo "$ip6 is not live"
         fi
