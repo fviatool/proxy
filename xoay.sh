@@ -181,8 +181,6 @@ check_all_ips() {
     done < /home/cloudfly/data.txt
     
 echo "Số lượng địa chỉ IPv6 hiện tại:"
-
-echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
 # Tải xuống tệp proxy
 download_proxy
