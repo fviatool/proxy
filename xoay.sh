@@ -15,7 +15,7 @@ gen64() {
 }
 
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Bat Dau Tai Xuong"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -82,7 +82,7 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "Bat Dau Cai Dat Proxy"
+echo "Tien Hanh Cai Dat Proxy..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 # Kiểm tra sự tồn tại của thư mục đích và tạo nếu cần
@@ -103,7 +103,7 @@ mkdir $WORKDIR && cd $_
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}/64"
+echo "IP = ${IP4}. Ipv6 = ${IP6}/64"
 
 PORT_COUNT=1000  # Số lượng cổng muốn tạo tự động
 MAX_PORT=65535
