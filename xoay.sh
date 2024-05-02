@@ -154,7 +154,7 @@ check_ipv6_live() {
     ping6 -c 3 $ipv6_address
 }
 
-#check_all_ipv6_live() {
+check_all_ipv6_live() {
     ip -6 addr | grep inet6 | while read -r line; do
         address=$(echo "$line" | awk '{print $2}')
         ip6=$(echo "$address" | cut -d'/' -f1)
