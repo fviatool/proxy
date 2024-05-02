@@ -82,7 +82,7 @@ cat << EOF > /etc/rc.d/rc.local
 touch /var/lock/subsys/local
 EOF
 
-echo "installing apps"
+echo "Bat Dau Cai Dat Proxy"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 # Kiểm tra sự tồn tại của thư mục đích và tạo nếu cần
@@ -95,7 +95,7 @@ cp src/3proxy /usr/local/etc/3proxy/bin/
 
 install_3proxy
 
-echo "working folder = /home/cloudfly"
+echo "Thu Muc folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
@@ -109,17 +109,17 @@ PORT_COUNT=1000  # Số lượng cổng muốn tạo tự động
 MAX_PORT=65535
 
 if [[ $PORT_COUNT =~ ^[0-9]+$ ]] && ((PORT_COUNT > 0)); then
-    echo "OK! Valid quantity entered: $PORT_COUNT"
+    echo "OK! Số lượng hợp lệ: $PORT_COUNT"
     FIRST_PORT=$((RANDOM % MAX_PORT))
     if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 0 && FIRST_PORT <= MAX_PORT)); then
-        echo "Random port generated: $FIRST_PORT."
+        echo "Cổng ngẫu nhiên được tạo: $FIRST_PORT."
         LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-        echo "The random port range is from $FIRST_PORT to $LAST_PORT."
+        echo "Phạm vi cổng ngẫu nhiên từ $FIRST_PORT đến $LAST_PORT."
     else
-        echo "The randomly generated port is out of range, please try again."
+        echo "Phạm vi cổng ngẫu nhiên đã tạo ra nằm ngoài phạm vi, vui lòng thử lại."
     fi
 else
-    echo "Invalid quantity entered: $PORT_COUNT. Please enter a positive integer."
+    echo "Số lượng không hợp lệ: $PORT_COUNT. Vui lòng nhập một số nguyên dương."
 fi
 
 gen_data >$WORKDIR/data.txt
@@ -147,7 +147,7 @@ gen_proxy_file_for_user
 # Xóa thư mục tạm
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo "Starting Proxy"
+echo "Tao Proxy Thanh Cong, Tien Hanh Check Proxy..."
 
 check_ipv6_live() {
     local ipv6_address=$1
@@ -161,7 +161,7 @@ check_all_ipv6_live() {
         ip6=$(echo "$address" | cut -d'/' -f1)
         ping6 -c 1 $ip6 > /dev/null 2>&1
         if [ $? -eq 0 ]; then
-            echo "IPv4: $IP4:$port -> $ip6 Live"
+            echo "IPv4: $IP4:Port: $port -> IPv6: $ip6 Live"
         else
             echo "$ip6 is not live"
         fi
@@ -182,5 +182,5 @@ check_all_ips() {
     
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
-# Tải xuống tệp proxy
+echo "Tải xuống tệp proxy:"
 download_proxy
