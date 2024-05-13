@@ -65,18 +65,10 @@ EOF
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
+        ipv6=$(head -n 1 "$WORKDATA/ipv6.txt")  # Lấy IPv6 từ tệp ipv6.txt
+        echo "//$IP4/$port/$(gen64 $ipv6)"
     done
 }
-
-gen_ipv6() {
-while IFS= read -r line; do
-    # Tách dòng thành các phần IPv4, cổng và IPv6
-    IFS="/" read -r _ _ ip6 _ <<< "$line"
-
-    # Sử dụng chỉ IPv6 ở đây
-    echo "IPv6: $ip6"
-done < "$WORKDATA/ipv6.txt"
 
 # Tạo rules iptables
 gen_iptables() {
@@ -129,9 +121,6 @@ done
 
 LAST_PORT=$(($FIRST_PORT + 500))
 echo "LAST_PORT is $LAST_PORT. Continue..."
-
-# Tạo danh sách IPv6
-gen_ipv6_64
 
 # Tạo dữ liệu cho proxy
 gen_data > $WORKDATA
