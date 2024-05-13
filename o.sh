@@ -134,7 +134,7 @@ while :; do
 done
 LAST_PORT=$(($FIRST_PORT + 500))
 echo "LAST_PORT is $LAST_PORT. Continue..."
-
+gen_ipv6_64
 # Tạo dữ liệu cho proxy
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
@@ -154,7 +154,6 @@ ulimit -n 10048
 EOF
 
 bash /etc/rc.local
-gen_ipv6_64
 # Tạo file proxy cho người dùng
 gen_proxy_file_for_user
 
