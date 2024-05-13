@@ -71,13 +71,11 @@ gen_ipv6_64() {
     done
 }
 
-
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
-
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
@@ -134,7 +132,6 @@ while :; do
 done
 LAST_PORT=$(($FIRST_PORT + 500))
 echo "LAST_PORT is $LAST_PORT. Continue..."
-gen_ipv6_64
 # Tạo dữ liệu cho proxy
 gen_data >$WORKDIR/data.txt
 gen_ipv6_64 > ipv6.txt
