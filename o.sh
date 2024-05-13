@@ -69,7 +69,7 @@ gen_data() {
     done
 }
 
-# Đọc tệp dữ liệu và xử lý từng dòng
+gen_ipv6() {
 while IFS= read -r line; do
     # Tách dòng thành các phần IPv4, cổng và IPv6
     IFS="/" read -r _ _ ip6 _ <<< "$line"
