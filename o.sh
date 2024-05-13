@@ -57,6 +57,18 @@ $(awk -F "/" '{print "\n" \
 EOF
 }
 
+# Hàm tạo danh sách IPv6
+gen_ipv6() {
+    while IFS= read -r line; do
+        # Tách dòng thành các phần IPv4, cổng và IPv6
+        IFS="/" read -r _ _ ip6 _ <<< "$line"
+
+        # Sử dụng chỉ IPv6 ở đây
+        echo "IPv6: $ip6"
+    done < "$WORKDATA/ipv6.txt"
+}
+
+# Hàm tạo tệp proxy cho người dùng
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA}/data.txt)
@@ -64,20 +76,21 @@ $(awk -F'/' '{print $3}' "$WORKDATA/ipv6.txt")
 EOF
 }
 
+# Hàm tạo dữ liệu cho proxy
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
-# Tạo rules iptables
+# Hàm tạo rules iptables
 gen_iptables() {
     cat <<EOF
 $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
-# Tạo lệnh ifconfig
+# Hàm tạo lệnh ifconfig
 gen_ifconfig() {
     cat <<EOF
 $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
@@ -100,8 +113,9 @@ install_3proxy
 # Thư mục làm việc
 echo "Thư mục làm việc = /home/cloudfly"
 WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/"
-mkdir -p $WORKDIR && cd $WORKDIR || exit
+WORKDATA="${WORKDIR}"
+mkdir -p $WORKDIR && cd $
+WORKDIR || exit
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
@@ -123,7 +137,7 @@ LAST_PORT=$(($FIRST_PORT + 500))
 echo "LAST_PORT is $LAST_PORT. Continue..."
 
 # Tạo dữ liệu cho proxy
-gen_data > $WORKDATA
+gen_data > $WORKDATA/data.txt
 
 # Tạo rules iptables
 gen_iptables > $WORKDIR/boot_iptables.sh
