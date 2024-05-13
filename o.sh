@@ -81,7 +81,8 @@ EOF
 # Tạo dữ liệu cho proxy
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "$(gen64 $IP6)"
+        echo "$(gen64 $IP6)" >> ipv6.txt
+        echo "$IP4:$port" >> ipv4.txt
     done
 }
 
