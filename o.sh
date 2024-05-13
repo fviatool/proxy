@@ -160,5 +160,3 @@ ip -6 addr | grep inet6 | wc -l
 # Tải proxy
 download_proxy
 
-
-Vui lòng thử chạy mã này và kiểm tra xem có còn lỗi không. Nếu còn vấn đề gì khác, đừng ngần ngại báo cáo cho tôi!
