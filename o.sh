@@ -121,8 +121,7 @@ mkdir $WORKDIR && cd $_
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
-
+echo "Địa chỉ IP nội bộ = ${IP4}. Dải ngoại vi cho IPv6 = ${IP6}"
 while :; do
   read -p "Nhập Cổng: " FIRST_PORT
   [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
