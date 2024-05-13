@@ -59,30 +59,29 @@ EOF
 
 # Tạo danh sách IPv6
 gen_ipv6_64() {
-    rm "$WORKDIR/data.txt"
+    rm "$WORKDIR/ipv6.txt"
     count_ipv6=1
     while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
         array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
         ip64() {
             echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
         }
-        echo "$IP6:$(ip64)" >> "$WORKDIR/data.txt"
+        echo "$IP6:$(ip64)" >> "$WORKDIR/ipv6.txt"
         let "count_ipv6 += 1"
     done
 }
 
-# Tạo file proxy.txt cho người dùng
+
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
-# Tạo dữ liệu cho proxy
+
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "$(gen64 $IP6)" >> ipv6.txt
-        echo "$IP4:$port" >> ipv4.txt
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
@@ -155,7 +154,7 @@ ulimit -n 10048
 EOF
 
 bash /etc/rc.local
-
+gen_ipv6_64
 # Tạo file proxy cho người dùng
 gen_proxy_file_for_user
 
