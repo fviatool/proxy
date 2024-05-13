@@ -30,7 +30,7 @@ install_3proxy() {
 
 # Tải proxy từ file.io
 download_proxy() {
-    cd /home/cloudfly || return
+    cd /root || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
@@ -59,7 +59,7 @@ EOF
 
 # Tạo danh sách IPv6
 gen_ipv6_64() {
-    rm "$WORKDIR/ipv6.txt"
+    rm -f "$WORKDIR/ipv6.txt"
     count_ipv6=1
     while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
         array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
@@ -71,11 +71,13 @@ gen_ipv6_64() {
     done
 }
 
+
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
+
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
@@ -114,12 +116,13 @@ install_3proxy
 echo "Thư mục làm việc = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir -p $WORKDIR && cd $WORKDIR || exit
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Địa chỉ IP nội bộ = ${IP4}. Dải ngoại vi cho IPv6 = ${IP6}"
+
 while :; do
   read -p "Nhập Cổng: " FIRST_PORT
   [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
@@ -130,14 +133,22 @@ while :; do
     echo "Number out of range, try again"
   fi
 done
+
 LAST_PORT=$(($FIRST_PORT + 500))
 echo "LAST_PORT is $LAST_PORT. Continue..."
-# Tạo dữ liệu cho proxy
-gen_data >$WORKDIR/data.txt
-gen_ipv6_64 > ipv6.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
 
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+# Tạo danh sách IPv6
+gen_ipv6_64
+
+# Tạo dữ liệu cho proxy
+gen_data > $WORKDATA
+
+# Tạo rules iptables
+gen_iptables > $WORKDIR/boot_iptables.sh
+
+# Tạo lệnh ifconfig
+gen_ifconfig > $WORKDIR/boot_ifconfig.sh
+
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
 
 # Tạo cấu hình 3proxy
@@ -152,6 +163,7 @@ ulimit -n 10048
 EOF
 
 bash /etc/rc.local
+
 # Tạo file proxy cho người dùng
 gen_proxy_file_for_user
 
@@ -162,4 +174,9 @@ rm -rf /root/3proxy-3proxy-0.8.6
 echo "Bắt đầu Proxy"
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
+
+# Tải proxy
 download_proxy
+
+
+Vui lòng thử chạy mã này và kiểm tra xem có còn lỗi không. Nếu còn vấn đề gì khác, đừng ngần ngại báo cáo cho tôi!
