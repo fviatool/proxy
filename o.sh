@@ -30,7 +30,7 @@ install_3proxy() {
 
 # Tải proxy từ file.io
 download_proxy() {
-    cd /root || return
+    cd /home/cloudfly || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
