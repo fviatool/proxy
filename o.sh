@@ -60,13 +60,13 @@ EOF
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
+$(awk -F'/' '{print $3}' "$WORKDATA/ipv6.txt")
 EOF
 }
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        ipv6=$(head -n 1 "$WORKDATA/ipv6.txt")  # Lấy IPv6 từ tệp ipv6.txt
-        echo "//$IP4/$port/$(gen64 $ipv6)"
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
