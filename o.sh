@@ -59,7 +59,7 @@ EOF
 
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
+$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA}/data.txt)
 $(awk -F'/' '{print $3}' "$WORKDATA/ipv6.txt")
 EOF
 }
@@ -100,7 +100,7 @@ install_3proxy
 # Thư mục làm việc
 echo "Thư mục làm việc = /home/cloudfly"
 WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
+WORKDATA="${WORKDIR}/"
 mkdir -p $WORKDIR && cd $WORKDIR || exit
 
 IP4=$(curl -4 -s icanhazip.com)
