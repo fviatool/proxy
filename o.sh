@@ -126,7 +126,7 @@ echo "Địa chỉ IP nội bộ = ${IP4}. Subnet ngoại vi cho IPv6 = ${IP6}"
 
 # Thiết lập cổng đầu tiên và cổng cuối cùng
 FIRST_PORT=10000
-LAST_PORT=20000
+LAST_PORT=500
 
 # Lặp qua từng cổng và cài đặt
 while [[ $FIRST_PORT -le $LAST_PORT ]]; do
