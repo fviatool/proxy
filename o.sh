@@ -118,18 +118,24 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
-# Lấy địa chỉ IPv4 và IPv6
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Địa chỉ IP nội bộ = ${IP4}. Subnet ngoại vi cho IPv6 = ${IP6}"
+echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
-FIRST_PORT=$(shuf -i 10000-20000 -n 1)
+while :; do
+  read -p "Nhập Cổng: " FIRST_PORT
+  [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
+  if ((FIRST_PORT >= 10000 && FIRST_PORT <= 20000)); then
+    echo "OK! Valid number"
+    break
+  else
+    echo "Number out of range, try again"
+  fi
+done
+LAST_PORT=$(($FIRST_PORT + 500))
+echo "LAST_PORT is $LAST_PORT. Continue..."
 
-# Tính toán LAST_PORT
-LAST_PORT=$(($FIRST_PORT + 750))
-
-echo "FIRST_PORT là $FIRST_PORT và LAST_PORT là $LAST_PORT. Tiếp tục..."
 
 # Tạo dữ liệu cho proxy
 gen_data >$WORKDIR/data.txt
