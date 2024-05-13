@@ -137,7 +137,7 @@ echo "LAST_PORT is $LAST_PORT. Continue..."
 gen_ipv6_64
 # Tạo dữ liệu cho proxy
 gen_data >$WORKDIR/data.txt
-gen_ipv6_64 >$WORKDIR/ipv6.txt
+gen_ipv6_64 > ipv6.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
