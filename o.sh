@@ -66,7 +66,7 @@ gen_ipv6_64() {
         ip64() {
             echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
         }
-        echo "$IP6:$(ip64):$(ip64):$(ip64):$(ip64)" >> "$WORKDIR/data.txt"
+        echo "$IP6:$(ip64)" >> "$WORKDIR/data.txt"
         let "count_ipv6 += 1"
     done
 }
