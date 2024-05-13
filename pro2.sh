@@ -1,40 +1,9 @@
 #!/bin/bash
 
-# Function to rotate IPv6 addresses
-rotate_ipv6() {
-    # Kiểm tra kết nối IPv6
-    echo "Đang kiểm tra kết nối IPv6 ..."
-    if ip -6 route get 2407:d140:1:100:1111 &> /dev/null; then
-        IP4=$(get_ipv4)
-        IP6=$(get_ipv6)
-        main_interface="eth0"
-        echo "[OKE]: Kết nối IPv6 đã được xác minh"
-        echo "IPv4: $IP4"
-        echo "IPv6: $IP6"
-        echo "Giao diện chính: eth0"
-    else
-        echo "[ERROR]: Kiểm tra kết nối IPv6 thất bại!"
-        exit 1
-    fi
-
-    # Xoay địa chỉ IPv6
-    gen_ipv6_64
-    gen_ifconfig
-    service network restart
-    echo "Địa chỉ IPv6 đã được xoay và cập nhật."
-}
-
-# Function to get IPv4 address
-get_ipv4() {
-    IP4=$(curl -4 -s icanhazip.com)
-    echo "$IP4"
-}
-
-# Function to get IPv6 address
-get_ipv6() {
-    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-    echo "$IP6"
-}
+WORKDIR="/home/cloudfly"
+MAXCOUNT=2222
+IFCFG="eth0"
+START_PORT=2000
 
 # Function to generate IPv6 addresses
 gen_ipv6_64() {
@@ -57,10 +26,35 @@ gen_ifconfig() {
     done < "$WORKDIR/data.txt" > "$WORKDIR/boot_ifconfig.sh"
 }
 
-# Set up variables
-WORKDIR="/home/cloudfly"
-MAXCOUNT=2222
-IFCFG="eth0"
+# Rotate IPv6
+rotate_ipv6() {
+    echo "Đang xoay IPv6..."
+    gen_ipv6_64
+    gen_ifconfig
+    bash "$WORKDIR/boot_ifconfig.sh"
+    service network restart
+    echo "IPv6 đã được xoay và cập nhật."
+}
+
+# Main
+echo "Kiểm tra kết nối IPv6 ..."
+if ip -6 route get 2403:6a40:0:16::1111 &> /dev/null; then
+    IP4="103.161.16.141"
+    IP6="2403:6a40:0:16"
+    main_interface="eth0"
+    echo "[OKE]: Thành công"
+    echo "IPV4: 103.161.16.141"
+    echo "IPV6: 2403:6a40:0:16"
+    echo "Mạng chính: eth0"
+else
+    echo "[ERROR]: thất bại!"
+    exit 1
+fi
 
 # Rotate IPv6 addresses
 rotate_ipv6
+
+# Proxy Start (Add your proxy configuration here)
+
+echo "Xoay Proxy Done"
+
