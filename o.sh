@@ -124,29 +124,17 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Địa chỉ IP nội bộ = ${IP4}. Subnet ngoại vi cho IPv6 = ${IP6}"
 
-# Thiết lập cổng đầu tiên và cổng cuối cùng
-FIRST_PORT=10000
-LAST_PORT=500
+FIRST_PORT=$(shuf -i 10000-20000 -n 1)
 
-# Lặp qua từng cổng và cài đặt
-while [[ $FIRST_PORT -le $LAST_PORT ]]; do
-  echo "Cổng hiện tại: $FIRST_PORT"
-  iptables -I INPUT -p tcp --dport $FIRST_PORT -m state --state NEW -j ACCEPT
+# Tính toán LAST_PORT
+LAST_PORT=$(($FIRST_PORT + 750))
 
-  # Tăng giá trị cổng cho lần lặp tiếp theo
-  ((FIRST_PORT++))
-done
-
-echo "Cài đặt cổng hoàn tất."
-    break
-  else
-    echo "Đang thiết lập Proxy"
-  fi
-done
+echo "FIRST_PORT là $FIRST_PORT và LAST_PORT là $LAST_PORT. Tiếp tục..."
 
 # Tạo dữ liệu cho proxy
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
+
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
 
