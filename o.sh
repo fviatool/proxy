@@ -57,33 +57,26 @@ $(awk -F "/" '{print "\n" \
 EOF
 }
 
-# Tạo danh sách IPv6
-gen_ipv6_64() {
-    rm -f "$WORKDIR/ipv6.txt"
-    count_ipv6=1
-    while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
-        array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
-        ip64() {
-            echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-        }
-        echo "$IP6:$(ip64)" >> "$WORKDIR/ipv6.txt"
-        let "count_ipv6 += 1"
-    done
-}
-
-
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
-
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
+
+# Đọc tệp dữ liệu và xử lý từng dòng
+while IFS= read -r line; do
+    # Tách dòng thành các phần IPv4, cổng và IPv6
+    IFS="/" read -r _ _ ip6 _ <<< "$line"
+
+    # Sử dụng chỉ IPv6 ở đây
+    echo "IPv6: $ip6"
+done < "$WORKDATA/ipv6.txt"
 
 # Tạo rules iptables
 gen_iptables() {
