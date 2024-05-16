@@ -148,15 +148,7 @@ gen_ifconfig
 # Generate iptables rules and apply them
 gen_iptables | bash
 
-echo "Starting Proxy"
-echo "Number of current IPv6 addresses:"
-ip -6 addr | grep inet6 | wc -l
-download_proxy
-
-echo "3proxy auto rotation enabled..."
-
-# Start automatic IPv6 rotation
-rotate_ipv6 &
+echo "Starting Proxy, Check Proxy Live"
 
 check_ipv6_live() {
     local ipv6_address=$1
@@ -187,3 +179,7 @@ check_all_ips() {
         echo "-----------------------------------"
     done < /home/cloudfly/data.txt
 }
+echo "So Luong IPv6 Hien Tai:"
+ip -6 addr | grep inet6 | wc -l
+download_proxy
+rotate_ipv6 &
