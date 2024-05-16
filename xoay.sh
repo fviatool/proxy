@@ -77,6 +77,7 @@ rotate_ipv6() {
     echo "IPv6 rotated and updated."
 }
 
+# Function to install 3proxy
 install_3proxy() {
     cd $WORKDIR
     wget https://github.com/z3APA3A/3proxy/archive/refs/tags/0.8.6.tar.gz
@@ -157,6 +158,9 @@ mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
 # Run rotate_ipv6 function to set up IPv6 rotation
 rotate_ipv6
 
+# Install 3proxy
+install_3proxy
+
 # Generate 3proxy configuration
 gen_3proxy > "/usr/local/etc/3proxy/3proxy.cfg"
 
@@ -176,6 +180,27 @@ else
     echo "[ERROR]: 3proxy binary not found!"
     exit 1
 fi
+
+echo "Starting Proxy"
+echo "Number of current IPv6 addresses:"
+ip -6 addr | grep inet6 | wc -l
+
+echo "3proxy setup completed."
+rotate_auto_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 600  # Đợi 10 phút
+    done
+}
+
+# Khởi động xoay IPv6 tự động
+
+rotate_auto_ipv6 &
+download_proxy
+```
+
+Mã này đã được cập nhật để thêm quy trình cài đặt 3proxy và sửa lỗi khi khởi động IPv6.
+
 
 echo "Starting Proxy"
 echo "Number of current IPv6 addresses:"
