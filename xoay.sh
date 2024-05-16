@@ -9,7 +9,6 @@ FIRST_PORT=10000
 LAST_PORT=10500
 
 # Function to rotate IPv6 addresses
-# Function to rotate IPv6 addresses
 rotate_ipv6() {
     IP4=$(curl -4 -s icanhazip.com)
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
