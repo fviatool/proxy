@@ -37,7 +37,7 @@ if [ -n "$ipv6_address" ]; then
     declare -A gateways=(
         [4]="2001:ee0:4f9b:$IPC::1"
         [5]="2001:ee0:4f9b:$IPC::1"
-        [244]="2001:ee0:4f9b3:$IPC::1"
+        [244]="2001:ee0:4f9b:$IPC::1"
         ["default"]="2001:ee0:4f9b:$IPC::1"
     )
 
@@ -154,11 +154,51 @@ $(awk -F "/" '{print "\n" \
 EOF
 }
 
-# Function to generate iptables rules
-    cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport "$4"  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
+gen_iptables() {
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport "$4"  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
 }
+
+# Hàm cập nhật thông tin giao diện mạng tự động
+update_network_info() {
+    auto_detect_interface
+}
+
+get_ipv4() {
+    ipv4=$(curl -4 -s icanhazip.com)
+    echo "$ipv4"
+}
+
+# Hàm reset 3proxy
+reset_3proxy() {
+    # Kill 3proxy
+    pkill 3proxy
+
+    # Khởi động lại 3proxy
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+}
+
+# Hàm cập nhật địa chỉ IPv6 và reset 3proxy
+update_ipv6_and_reset() {
+    new_ipv6=$(gen64 $IP6)
+    echo "Updating IPv6 Address: $new_ipv6"
+
+    # Cập nhật địa chỉ IPv6 cho proxy
+    sed -i "s/proxy -6 -n -a -p[0-9]* -i[0-9.]* -e[0-9a-f:]*$/proxy -6 -n -a -p${FIRST_PORT} -i${IP4} -e${new_ipv6}/" /usr/local/etc/3proxy/3proxy.cfg
+
+    # Reset 3proxy
+    reset_3proxy
+}
+
+# Lặp vô hạn để cập nhật địa chỉ IPv6 sau mỗi 5 phút
+while true; do
+    update_ipv6_and_reset
+    sleep 300  # Chờ 5 phút trước khi cập nhật lại
+done
+
+cat << EOF > /etc/rc.d/rc.local
+#!/bin/bash
+touch /var/lock/subsys/local
+EOF
 
 # Function to download proxy.txt file
 download_proxy() {
