@@ -73,6 +73,26 @@ else
     echo "No IPv6 address obtained."
 fi
 
+install_3proxy() {
+    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-0.9.4
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/{bin,stat}
+    cp bin/3proxy /usr/local/etc/3proxy/bin/
+    cp ../init.d/3proxy.sh /etc/init.d/3proxy
+    chmod +x /etc/init.d/3proxy
+    chkconfig 3proxy on
+    cd $WORKDIR
+}
+
+WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
+MAXCOUNT=2222
+IFCFG="eth0"
+FIRST_PORT=10000
+LAST_PORT=10500
+
 # Hàm rotate_ipv6 xoay địa chỉ IPv6
 rotate_ipv6() {
     IP4=$(curl -4 -s icanhazip.com)
