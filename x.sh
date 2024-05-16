@@ -2,20 +2,17 @@
 
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
-    # Kiểm tra kết nối IPv6
-    echo "Đang kiểm tra kết nối IPv6 ..."
-    if ip -6 route get 2403:6a40:0:91:1111 &> /dev/null; then
-        IP4=$(get_ipv4)
-        IP6=$(get_ipv6)
-        main_interface="eth0"
-        echo "[OKE]: Kết nối IPv6 đã được xác minh"
-        echo "IPv4: $IP4"
-        echo "IPv6: $IP6"
-        echo "Giao diện chính: eth0"
-    else
-        echo "[ERROR]: Kiểm tra kết nối IPv6 thất bại!"
-        exit 1
-    fi
+    IP4=$(get_ipv4)
+    IP6=$(get_ipv6)
+    main_interface="eth0"
+    echo "IPv4: $IP4"
+    echo "IPv6: $IP6"
+    echo "Giao diện chính: eth0"
+    gen_ipv6_64
+    gen_ifconfig
+    service network restart
+    echo "Địa chỉ IPv6 đã được xoay và cập nhật."
+}
 
     # Xoay địa chỉ IPv6
     gen_ipv6_64
