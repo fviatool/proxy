@@ -4,7 +4,7 @@
 rotate_ipv6() {
     # Kiểm tra kết nối IPv6
     echo "Đang kiểm tra kết nối IPv6 ..."
-    if ip -6 route get 2407:d140:1:100:1111 &> /dev/null; then
+    if ip -6 route get 2403:6a40:0:91:1111 &> /dev/null; then
         IP4=$(get_ipv4)
         IP6=$(get_ipv6)
         main_interface="eth0"
