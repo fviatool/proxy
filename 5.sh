@@ -96,13 +96,13 @@ mkdir $WORKDIR && cd $_
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
+echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-  FIRST_PORT=10000
+FIRST_PORT=10000
 
 LAST_PORT=$((FIRST_PORT + 999))
 echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."   
-done
+
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
