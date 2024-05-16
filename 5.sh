@@ -98,13 +98,10 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
-while :; do
   FIRST_PORT=10000
 
 LAST_PORT=$((FIRST_PORT + 999))
-echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."
-    echo "Dang Thiet Lap Proxy"
-  fi
+echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."   
 done
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
