@@ -154,6 +154,8 @@ yum -y install wget gcc net-tools bsdtar zip >/dev/null
 rm -rf /root/3proxy-0.9.4
 
 echo "Working folder: $WORKDIR"
+WORKDIR="/home/user/3proxy"
+
 mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
 
 # Tạo cấu hình 3proxy
