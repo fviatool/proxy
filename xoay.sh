@@ -174,9 +174,8 @@ reset_3proxy() {
     pkill 3proxy
 
     # Khởi động lại 3proxy
-    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+    3proxy /usr/local/etc/3proxy/3proxy.cfg &
 }
-
 # Hàm cập nhật địa chỉ IPv6 và reset 3proxy
 update_ipv6_and_reset() {
     
