@@ -7,13 +7,16 @@ random() {
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+
+# Function to generate a random IPv6 address
 gen64() {
     ip64() {
         echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
     }
-    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)" > "/ipv6.txt"
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)" > "${WORKDATA}/ipv6.txt"
 }
 
+# Function to install 3proxy
 install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -25,11 +28,13 @@ install_3proxy() {
     cd $WORKDIR || exit
 }
 
+# Function to download proxy file
 download_proxy() {
     cd /home/cloudfly || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
+# Function to generate 3proxy configuration
 gen_3proxy() {
     cat <<EOF
 daemon
@@ -52,30 +57,35 @@ $(awk -F "/" '{print "\n" \
 EOF
 }
 
+# Function to generate proxy file for user
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
+# Function to generate data for proxies
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
+# Function to generate iptables rules
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
+# Function to generate ifconfig commands
 gen_ifconfig() {
     cat <<EOF
 $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
+# Create rc.local file
 cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
 touch /var/lock/subsys/local
