@@ -111,7 +111,7 @@ rotate_ipv6() {
 
 # Hàm gen_ipv6_64 tạo địa chỉ IPv6
 gen_ipv6_64() {
-    rm "$WORKDIR/data.txt"
+    rm "$WORKDIR/data.txt" 2>/dev/null
     count_ipv6=1
     while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
         array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
@@ -229,4 +229,3 @@ rotate_auto_ipv6 &
 # Chạy hàm rotate_ipv6 để cài đặt xoay IPv6
 rotate_ipv6
 
-download_proxy
