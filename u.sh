@@ -115,44 +115,6 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
 
-# Function to generate IPv6 addresses starting from a specific prefix
-gen_ipv6_64() {
-    rm "$WORKDIR/data.txt"  # Remove old file if exists
-    count_ipv6=1
-    while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
-        array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
-        ip64() {
-            echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-        }
-        echo "2403:6a40:0:91:$(ip64):$(ip64):$(ip64):$(ip64)" >> "$WORKDIR/data.txt"
-        let "count_ipv6 += 1"
-    done
-}
-
-# Function to rotate IPv6 addresses
-rotate_ipv6() {
-    gen_ipv6_64
-    # Set up 3proxy configuration with new IPv6 addresses
-    gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
-}
-
-# Set up variables
-MAXCOUNT=1000
-
-# Generate initial IPv6 addresses and 3proxy configuration
-gen_ipv6_64
-gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
-
-# Function to rotate IPv6 addresses automatically
-rotate_auto_ipv6() {
-    while true; do
-        rotate_ipv6
-        sleep 600  # Wait for 10 minutes
-    done
-}
-
-# Start automatic IPv6 rotation
-rotate_auto_ipv6 &
 echo "So Luong IPv6 Hien Tai:"
 ip -6 addr | grep inet6 | wc -l
 download_proxy
