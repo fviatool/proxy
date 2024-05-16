@@ -1,9 +1,24 @@
-#!/bin/bash
+#!/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-Hàm kiểm tra và chọn tên giao diện mạng tự động
+random() {
+	tr </dev/urandom -dc A-Za-z0-9 | head -c5
+	echo
+}
+
+array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+gen64() {
+	ip64() {
+		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+	}
+	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+}
+
+# Hàm kiểm tra và chọn tên giao diện mạng tự động
 auto_detect_interface() {
     INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
 }
+
 # Get IPv6 address
 ipv6_address=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
 
@@ -57,6 +72,19 @@ else
     echo "No IPv6 address obtained."
 fi
 
+install_3proxy() {
+    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-0.9.4
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/{bin,stat}
+    cp bin/3proxy /usr/local/etc/3proxy/bin/
+    cp ../init.d/3proxy.sh /etc/init.d/3proxy
+    chmod +x /etc/init.d/3proxy
+    chkconfig 3proxy on
+    cd $WORKDIR
+}
+
 # Variables
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
@@ -79,19 +107,6 @@ rotate_ipv6() {
     gen_ifconfig
     service network restart
     echo "IPv6 rotated and updated."
-}
-
-install_3proxy() {
-    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
-    wget -qO- $URL | bsdtar -xvf-
-    cd 3proxy-0.9.4
-    make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/{bin,stat}
-    cp bin/3proxy /usr/local/etc/3proxy/bin/
-    cp ../init.d/3proxy.sh /etc/init.d/3proxy
-    chmod +x /etc/init.d/3proxy
-    chkconfig 3proxy on
-    cd $WORKDIR
 }
 
 # Function to generate IPv6 addresses
