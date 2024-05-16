@@ -11,7 +11,7 @@ ipv6_address=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | h
 if [ -n "$ipv6_address" ]; then
     echo "IPv6 address obtained: $ipv6_address"
 
-    # Khai báo mảng kết hợp để lưu trữ địa chỉ IPv6 và cổng cổng mặc định
+    # Khai báo mảng kết hợp để lưu trữ địa chỉ IPv6 và cổng mặc định
     declare -A ipv6_addresses=(
         [4]="2001:ee0:4f9b::$IPD:0000/64"
         [5]="2001:ee0:4f9b::$IPD:0000/64"
@@ -60,17 +60,18 @@ fi
 service network restart
 
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
+
 install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -79,9 +80,6 @@ install_3proxy() {
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    #cp ./scripts/rc.d/proxy.sh /etc/init.d/3proxy
-    #chmod +x /etc/init.d/3proxy
-    #chkconfig 3proxy on
     cd $WORKDIR
 }
 
@@ -136,11 +134,6 @@ $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
-cat << EOF > /etc/rc.d/rc.local
-#!/bin/bash
-touch /var/lock/subsys/local
-EOF
-
 echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
@@ -184,3 +177,64 @@ echo "Starting Proxy"
 echo "Số lượng địa chỉ IPv6 hiện tại:"
 ip -6 addr | grep inet6 | wc -l
 download_proxy
+
+echo "Bắt đầu xoay ipv6 tự động:"
+
+#!/bin/bash
+
+# Function to generate IPv6 addresses
+gen_ipv6_64() {
+    rm "$WORKDIR/data.txt"  # Xóa tệp tin cũ nếu tồn tại
+    for port in $(seq 10000 10999); do
+        array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
+        ip64() {
+            echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+        }
+        echo "$IP6:$(ip64):$(ip64):$(ip64):$(ip64):$(ip64)/$port" >> "$WORKDIR/data.txt"
+    done
+}
+
+# Function to generate 3proxy configuration
+gen_3proxy() {
+    cat <<EOF
+daemon
+maxconn 2000
+nserver 1.1.1.1
+nserver 8.8.4.4
+nserver 2001:4860:4860::8888
+nserver 2001:4860:4860::8844
+nscache 65536
+timeouts 1 5 30 60 180 1800 15 60
+setgid 65535
+setuid 65535
+stacksize 6291456 
+flush
+
+$(awk -F "/" '{print "\n" \
+"" $1 "\n" \
+"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
+"flush\n"}' ${WORKDATA})
+EOF
+}
+echo "3proxy đang xoay tự động..."
+
+# Function to rotate IPv6 addresses
+rotate_ipv6() {
+    while true; do
+        IP4=$(curl -4 -s icanhazip.com)
+        IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+        main_interface="eth0"
+        echo "IPv4: $IP4"
+        echo "IPv6: $IP6"
+        echo "Main interface: $main_interface"
+
+        # Rotate IPv6 addresses
+        gen_ipv6_64
+        gen_ifconfig
+        service network restart
+        echo "IPv6 rotated and updated."
+
+        # Delay before next rotation
+        sleep 300  # Chờ 5 phút trước khi cập nhật lại
+    done
+}
