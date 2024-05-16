@@ -228,4 +228,7 @@ rotate_ipv6() {
 rotate_auto_ipv6 &
 # Chạy hàm rotate_ipv6 để cài đặt xoay IPv6
 rotate_ipv6
+echo "Number of current IPv6 addresses:"
+ip -6 addr | grep inet6 | wc -l
+download_proxy
 
