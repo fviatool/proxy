@@ -4,187 +4,9 @@ auto_detect_interface() {
     INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
 }
 
-# Get IPv6 address
-ipv6_address=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
-
-# Kiểm tra xem có nhận được địa chỉ IPv6 không
-if [ -n "$ipv6_address" ]; then
-    echo "IPv6 address obtained: $ipv6_address"
-
-    # Khai báo mảng kết hợp để lưu trữ địa chỉ IPv6 và cổng mặc định
-    declare -A ipv6_addresses=(
-        [4]="2001:ee0:4f9b::$IPD:0000/64"
-        [5]="2001:ee0:4f9b::$IPD:0000/64"
-        [244]="2001:ee0:4f9b::$IPD:0000/64"
-        ["default"]="2001:ee0:4f9b::$IPC::$IPD:0000/64"
-    )
-
-    declare -A gateways=(
-        [4]="2001:ee0:4f9b:$IPC::1"
-        [5]="2001:ee0:4f9b:$IPC::1"
-        [244]="2001:ee0:4f9b:$IPC::1"
-        ["default"]="2001:ee0:4f9b:$IPC::1"
-    )
-
-    # Lấy ra các octet thứ ba và thứ tư của IPv4
-    IPC=$(echo "$ipv6_address" | cut -d":" -f5)
-    IPD=$(echo "$ipv6_address" | cut -d":" -f6)
-
-    # Đặt địa chỉ IPv6 và cổng mặc định dựa trên octet thứ ba của IPv4
-    IPV6_ADDRESS="${ipv6_addresses[$IPC]}"
-    GATEWAY="${gateways[$IPC]}"
-
-    # Kiểm tra xem giao diện có sẵn không
-    INTERFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -n1)
-
-    if [ -n "$INTERFACE" ]; then
-        echo "Configuring interface: $INTERFACE"
-
-        # Cấu hình IPv6
-        echo "IPV6_ADDR_GEN_MODE=stable-privacy" >> /etc/network/interfaces
-        echo "IPV6ADDR=$ipv6_address/64" >> /etc/network/interfaces
-        echo "IPV6_DEFAULTGW=$GATEWAY" >> /etc/network/interfaces
-
-        # Khởi động lại dịch vụ mạng
-        service networking restart
-        systemctl restart NetworkManager.service
-        ifconfig "$INTERFACE"
-        echo "Done!"
-    else
-        echo "No network interface available."
-    fi
-else
-    echo "No IPv6 address obtained."
-fi
-
-service network restart
-
-random() {
-    tr </dev/urandom -dc A-Za-z0-9 | head -c5
-    echo
-}
-
-array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
-gen64() {
-    ip64() {
-        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-    }
-    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
-}
-
-install_3proxy() {
-    echo "installing 3proxy"
-    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- $URL | bsdtar -xvf-
-    cd 3proxy-3proxy-0.8.6
-    make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
-    cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd $WORKDIR
-}
-
-download_proxy() {
-    cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://file.io
-}
-
-gen_3proxy() {
-    cat <<EOF
-daemon
-maxconn 2000
-nserver 1.1.1.1
-nserver 8.8.4.4
-nserver 2001:4860:4860::8888
-nserver 2001:4860:4860::8844
-nscache 65536
-timeouts 1 5 30 60 180 1800 15 60
-setgid 65535
-setuid 65535
-stacksize 6291456 
-flush
-
-$(awk -F "/" '{print "\n" \
-"" $1 "\n" \
-"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' ${WORKDATA})
-EOF
-}
-
-gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
-EOF
-}
-
-gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
-    done
-}
-
-gen_iptables() {
-    cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
-}
-
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
-}
-
-echo "installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
-
-install_3proxy
-
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
-
-IP4=$(curl -4 -s icanhazip.com)
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-
-echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
-
-FIRST_PORT=10000
-
-LAST_PORT=$((FIRST_PORT + 999))
-echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."   
-
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
-
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-
-cat >>/etc/rc.local <<EOF
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
-ulimit -n 10048
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
-EOF
-
-bash /etc/rc.local
-
-gen_proxy_file_for_user
-rm -rf /root/3proxy-3proxy-0.8.6
-
-echo "Starting Proxy"
-echo "Số lượng địa chỉ IPv6 hiện tại:"
-ip -6 addr | grep inet6 | wc -l
-download_proxy
-
-echo "Bắt đầu xoay ipv6 tự động:"
-
-#!/bin/bash
-
 # Function to generate IPv6 addresses
 gen_ipv6_64() {
-    rm "$WORKDIR/data.txt"  # Xóa tệp tin cũ nếu tồn tại
+    rm "$WORKDIR/data.txt"  # Remove the old file if it exists
     for port in $(seq 10000 10999); do
         array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
         ip64() {
@@ -216,9 +38,159 @@ $(awk -F "/" '{print "\n" \
 "flush\n"}' ${WORKDATA})
 EOF
 }
-echo "3proxy đang xoay tự động..."
 
-# Function to rotate IPv6 addresses
+install_3proxy() {
+    echo "Installing 3proxy"
+    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-3proxy-0.8.6
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    cp src/3proxy /usr/local/etc/3proxy/bin/
+    cd $WORKDIR
+}
+
+download_proxy() {
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
+}
+
+gen_data() {
+    seq $FIRST_PORT $LAST_PORT | while read port; do
+        echo "//$IP4/$port/$(gen64 $IP6)"
+    done
+}
+
+gen_iptables() {
+    cat <<EOF
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+EOF
+}
+
+gen_ifconfig() {
+    cat <<EOF
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+EOF
+}
+
+# Auto-detect network interface
+auto_detect_interface
+
+# Get IPv6 address
+ipv6_address=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
+
+# Check if IPv6 address is obtained
+if [ -n "$ipv6_address" ]; then
+    echo "IPv6 address obtained: $ipv6_address"
+
+    # Declare associative arrays to store IPv6 addresses and default gateways
+    declare -A ipv6_addresses=(
+        [4]="2001:ee0:4f9b::$IPD:0000/64"
+        [5]="2001:ee0:4f9b::$IPD:0000/64"
+        [244]="2001:ee0:4f9b::$IPD:0000/64"
+        ["default"]="2001:ee0:4f9b::$IPC::$IPD:0000/64"
+    )
+
+    declare -A gateways=(
+        [4]="2001:ee0:4f9b:$IPC::1"
+        [5]="2001:ee0:4f9b:$IPC::1"
+        [244]="2001:ee0:4f9b:$IPC::1"
+        ["default"]="2001:ee0:4f9b:$IPC::1"
+    )
+
+    # Extract the third and fourth octets of the IPv4 address
+    IPC=$(echo "$ipv6_address" | cut -d":" -f5)
+    IPD=$(echo "$ipv6_address" | cut -d":" -f6)
+
+    # Set IPv6 address and default port based on the third octet of IPv4
+    IPV6_ADDRESS="${ipv6_addresses[$IPC]}"
+    GATEWAY="${gateways[$IPC]}"
+
+    # Check if network interface is available
+    if [ -n "$INTERFACE" ]; then
+        echo "Configuring interface: $INTERFACE"
+
+        # Configure IPv6
+        echo "IPV6_ADDR_GEN_MODE=stable-privacy" >> /etc/network/interfaces
+        echo "IPV6ADDR=$ipv6_address/64" >> /etc/network/interfaces
+        echo "IPV6_DEFAULTGW=$GATEWAY" >> /etc/network/interfaces
+
+        # Restart network service
+        service networking restart
+        systemctl restart NetworkManager.service
+        ifconfig "$INTERFACE"
+        echo "Done!"
+    else
+        echo "No network interface available."
+    fi
+else
+    echo "No IPv6 address obtained."
+fi
+
+service network restart
+
+# Generate random characters
+random() {
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
+}
+
+array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+
+# Function to generate IPv6 address
+gen64() {
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+}
+
+# Install 3proxy
+install_3proxy
+
+echo "Working folder = /home/cloudfly"
+WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
+mkdir $WORKDIR && cd $_
+
+# Get IPv4 and IPv6 addresses
+IP4=$(curl -4 -s icanhazip.com)
+IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+
+echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
+
+FIRST_PORT=10000
+LAST_PORT=$((FIRST_PORT + 999))
+echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."   
+
+# Generate data for 3proxy configuration
+gen_data >$WORKDIR/data.txt
+gen_iptables >$WORKDIR/boot_iptables.sh
+gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
+
+gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+
+cat >>/etc/rc.local <<EOF
+bash ${WORKDIR}/boot_iptables.sh
+bash ${WORKDIR}/boot_ifconfig.sh
+ulimit -n 10048
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+EOF
+
+bash /etc/rc.local
+
+gen_proxy_file_for_user
+rm -rf /root/3proxy-3proxy-0.8.6
+
+echo "Starting Proxy"
+echo "Number of current IPv6 addresses:"
+ip -6 addr | grep inet6 | wc -l
+download_proxy
+
+echo "Starting automatic IPv6 rotation..."
+
+# Function to rotate IPv6 addresses automatically
 rotate_ipv6() {
     while true; do
         IP4=$(curl -4 -s icanhazip.com)
@@ -235,6 +207,9 @@ rotate_ipv6() {
         echo "IPv6 rotated and updated."
 
         # Delay before next rotation
-        sleep 300  # Chờ 5 phút trước khi cập nhật lại
+        sleep 300  # Wait for 5 minutes before updating again
     done
 }
+
+# Start automatic IPv6 rotation
+rotate_ipv6 &
