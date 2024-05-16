@@ -77,6 +77,18 @@ rotate_ipv6() {
     echo "IPv6 rotated and updated."
 }
 
+install_3proxy() {
+    cd $WORKDIR
+    wget https://github.com/z3APA3A/3proxy/archive/refs/tags/0.8.6.tar.gz
+    tar -xzf 0.8.6.tar.gz
+    cd 3proxy-0.8.6
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/bin
+    cp src/3proxy /usr/local/etc/3proxy/bin/
+    cp ./scripts/rc.d/init.d/3proxy /etc/init.d/
+    chkconfig --add 3proxy
+}
+
 # Function to generate IPv6 addresses
 gen_ipv6_64() {
     rm "$WORKDIR/data.txt"
@@ -136,18 +148,6 @@ download_proxy() {
 # Installation steps
 echo "Installing necessary packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
-
-install_3proxy() {
-    cd $WORKDIR
-    wget https://github.com/z3APA3A/3proxy/archive/refs/tags/0.8.6.tar.gz
-    tar -xzf 0.8.6.tar.gz
-    cd 3proxy-0.8.6
-    make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/bin
-    cp src/3proxy /usr/local/etc/3proxy/bin/
-    cp ./scripts/rc.d/init.d/3proxy /etc/init.d/
-    chkconfig --add 3proxy
-}
 
 rm -rf /root/3proxy-3proxy-0.8.6
 
