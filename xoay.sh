@@ -179,8 +179,8 @@ reset_3proxy() {
 
 # Hàm cập nhật địa chỉ IPv6 và reset 3proxy
 update_ipv6_and_reset() {
-    new_ipv6=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
-    echo "Updating IPv6 Address: $new_ipv6"
+    
+    echo "Updating IPv6 Address: $ipv6_address"
 
     # Cập nhật địa chỉ IPv6 cho proxy
     sed -i "s/proxy -6 -n -a -p[0-9]* -i[0-9.]* -e[0-9a-f:]*$/proxy -6 -n -a -p${FIRST_PORT} -i${IP4} -e${new_ipv6}/" /usr/local/etc/3proxy/3proxy.cfg
