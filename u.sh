@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -14,35 +14,19 @@ gen64() {
     echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
-auth_ip() {
-    echo "auth none"
-    port=$START_PORT
-    while read ip; do
-        echo "proxy -6 -n -a -p$port -i$IP4 -e$ip"
-        ((port+=1))
-    done < $WORKDIR/ipv6.txt
-}
-
 install_3proxy() {
-    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
+    echo "installing 3proxy"
+    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
-    cd 3proxy-0.9.4
+    cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/{bin,stat}
-    cp bin/3proxy /usr/local/etc/3proxy/bin/
-    cp ../init.d/3proxy.sh /etc/init.d/3proxy
-    chmod +x /etc/init.d/3proxy
-    chkconfig 3proxy on
+    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
+    cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
 }
 
-download_proxy() {
-    cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://transfer.sh
-}
-
 gen_3proxy() {
-    cat <<EOF > /usr/local/etc/3proxy/3proxy.cfg
+    cat <<EOF
 daemon
 maxconn 2000
 nserver 1.1.1.1
@@ -58,7 +42,7 @@ flush
 
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
-"$(auth_ip)\n" \
+"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
 "flush\n"}' ${WORKDATA})
 EOF
 }
@@ -70,14 +54,14 @@ EOF
 }
 
 gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
+    seq 10000 101000 | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
@@ -87,22 +71,10 @@ $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
-rotate_proxy_script() {
-    cat <<EOF
+cat << EOF > /etc/rc.d/rc.local
 #!/bin/bash
-WORKDIR="/home/cloudfly"  # Update with your actual working directory
-IP4=\$(curl -4 -s icanhazip.com)
-while :; do
-    for ((i = $FIRST_PORT; i < $LAST_PORT; i++)); do
-        IPV6=\$(head -n \$i \$WORKDIR/ipv6.txt | tail -n 1)
-        /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -sstop
-        /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg -h\$IP4 -e\$IPV6 -p\$i
-    done
-    sleep 300  # Sleep for 5 minutes before rotating again
-done
+touch /var/lock/subsys/local
 EOF
-}
-
 
 echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
@@ -112,31 +84,17 @@ install_3proxy
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $WORKDIR || exit 1
+mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-while :; do
-  FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-  if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-    echo "OK! Random Ngau Nhien Port"
-    LAST_PORT=$((FIRST_PORT + 999))
-    echo "RANDOM is $LAST_PORT. Tien Hanh Tiep Tuc..."
-    break
-  else
-    echo "Dang Thiet Lap Proxy"
-  fi
-done
-
-gen_data > ${WORKDIR}/data.txt
-gen_iptables > ${WORKDIR}/boot_iptables.sh
-gen_ifconfig > ${WORKDIR}/boot_ifconfig.sh
-chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local /usr/local/etc/3proxy/rotate_3proxy.sh
-rotate_proxy_script > ${WORKDIR}/rotate_3proxy.sh
-gen_3proxy
+gen_data >$WORKDIR/data.txt
+gen_iptables >$WORKDIR/boot_iptables.sh
+gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+chmod +x boot_*.sh /etc/rc.local
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
@@ -148,7 +106,45 @@ EOF
 bash /etc/rc.local
 
 gen_proxy_file_for_user
-rm -rf /root/3proxy-0.9.4
+rm -rf /root/3proxy-3proxy-0.8.6
 
-rotate_proxy_script &
-download_proxy
+echo "Starting Proxy"
+
+# Function to generate IPv6 addresses starting from a specific prefix
+gen_ipv6_64() {
+    rm "$WORKDIR/data.txt"  # Remove old file if exists
+    count_ipv6=1
+    while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
+        array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
+        ip64() {
+            echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+        }
+        echo "2403:6a40:0:91:$(ip64):$(ip64):$(ip64):$(ip64)" >> "$WORKDIR/data.txt"
+        let "count_ipv6 += 1"
+    done
+}
+
+# Function to rotate IPv6 addresses
+rotate_ipv6() {
+    gen_ipv6_64
+    # Set up 3proxy configuration with new IPv6 addresses
+    gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+}
+
+# Set up variables
+MAXCOUNT=1000
+
+# Generate initial IPv6 addresses and 3proxy configuration
+gen_ipv6_64
+gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+
+# Function to rotate IPv6 addresses automatically
+rotate_auto_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 600  # Wait for 10 minutes
+    done
+}
+
+# Start automatic IPv6 rotation
+rotate_auto_ipv6 &
