@@ -82,7 +82,7 @@ EOF
 
 # Hàm gen_iptables tạo luật iptables
 gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 " -m state --state NEW -j ACCEPT"}' "${WORKDATA}"
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
 }
 
 # Hàm download_proxy tải tệp proxy.txt
