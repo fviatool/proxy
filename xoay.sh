@@ -1,4 +1,4 @@
-#!#!/bin/bash
+#!/bin/bash
 
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
@@ -33,7 +33,7 @@ gen_ipv6_64() {
         ip64() {
             echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
         }
-        echo "$IP6:$(ip64):$(ip64):$(ip64):$(ip64):$(ip64)" >> "$WORKDIR/data.txt"
+        echo "$IP6:$(ip64):$(ip64):$(ip64):$(ip64):$(ip64)" >> "$WORKDATA"
         let "count_ipv6 += 1"
     done
 }
@@ -41,8 +41,9 @@ gen_ipv6_64() {
 # Function to generate ifconfig commands
 gen_ifconfig() {
     while read -r line; do
-        echo "ifconfig $main_interface inet6 add $line/64"
-    done < "$WORKDIR/data.txt" > "$WORKDIR/boot_ifconfig.sh"
+        echo "ifconfig $IFCFG inet6 add $line/64"
+    done < "$WORKDATA" > "$WORKDIR/boot_ifconfig.sh"
+    chmod +x "$WORKDIR/boot_ifconfig.sh"
 }
 
 # Function to generate 3proxy configuration
@@ -64,41 +65,42 @@ flush
 $(awk -F "/" '{print "\n" \
 "" $1 "\n" \
 "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
-"flush\n"}' ${WORKDATA})
+"flush\n"}' "${WORKDATA}")
 EOF
 }
 
 # Function to generate iptables rules
 gen_iptables() {
-    cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDATA}"
 }
 
 # Function to download proxy.txt file
 download_proxy() {
-    cd /home/cloudfly || return
+    cd "$WORKDIR" || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
 # Set up variables
 WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
 MAXCOUNT=2222
+IFCFG="eth0"
+FIRST_PORT=10000
+LAST_PORT=10500
 
 # Main script starts here
 
-echo "installing apps"
+echo "Installing required packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
-mkdir $WORKDIR && cd $_
+echo "Working folder: $WORKDIR"
+mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
 
 # Run rotate_ipv6 function to set up IPv6 rotation
 rotate_ipv6
 
 # Generate 3proxy configuration
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+gen_3proxy > "/usr/local/etc/3proxy/3proxy.cfg"
 
 # Generate data for IPv6 addresses
 gen_ipv6_64
@@ -106,21 +108,20 @@ gen_ipv6_64
 # Generate ifconfig commands
 gen_ifconfig
 
-# Generate iptables rules
-gen_iptables > $WORKDIR/boot_iptables.sh
-
-# Make boot scripts executable
-chmod +x ${WORKDIR}/boot_*.sh
+# Generate iptables rules and execute them
+gen_iptables | bash
 
 # Start 3proxy service
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
+if [[ -x "/usr/local/etc/3proxy/bin/3proxy" ]]; then
+    "/usr/local/etc/3proxy/bin/3proxy" "/usr/local/etc/3proxy/3proxy.cfg" &
+else
+    echo "[ERROR]: 3proxy binary not found!"
+    exit 1
+fi
 
 echo "Starting Proxy"
 echo "Number of current IPv6 addresses:"
 ip -6 addr | grep inet6 | wc -l
-
-# Download proxy.txt file
-download_proxy
 
 echo "3proxy setup completed."
 rotate_auto_ipv6() {
@@ -132,3 +133,4 @@ rotate_auto_ipv6() {
 
 # Khởi động xoay IPv6 tự động
 rotate_auto_ipv6 &
+download_proxy
