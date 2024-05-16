@@ -9,8 +9,8 @@ random() {
 # Hàm gen64 tạo địa chỉ IPv6 ngẫu nhiên
 gen64() {
     ip64() {
-        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-    }
+    echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+}
     echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
