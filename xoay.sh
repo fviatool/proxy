@@ -9,20 +9,21 @@ FIRST_PORT=10000
 LAST_PORT=10500
 
 # Function to rotate IPv6 addresses
+# Function to rotate IPv6 addresses
 rotate_ipv6() {
-    # Check if IPv6 route is available
-    echo "Checking IPv6 connectivity ..."
-        IP4=$(curl -4 -s icanhazip.com)
-        IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-        main_interface="eth0"
-        echo "[OK]: Connectivity verified"
-        echo "IPv4: $IP4"
-        echo "IPv6: $IP6"
-        echo "Main interface: $main_interface"
-    else
-        echo "[ERROR]: IPv6 connectivity check failed!"
-        exit 1
-    fi
+    IP4=$(curl -4 -s icanhazip.com)
+    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+    main_interface="eth0"
+    echo "IPv4: $IP4"
+    echo "IPv6: $IP6"
+    echo "Main interface: $main_interface"
+
+    # Rotate IPv6 addresses
+    gen_ipv6_64
+    gen_ifconfig
+    service network restart
+    echo "IPv6 rotated and updated."
+}
 
     # Rotate IPv6 addresses
     gen_ipv6_64
