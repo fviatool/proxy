@@ -1,98 +1,63 @@
-#!/usr/bin/bash
+#!/bin/bash
+
+# Function to rotate IPv6 addresses
+rotate_ipv6() {
+    # Kiểm tra kết nối IPv6
+    echo "Đang kiểm tra kết nối IPv6 ..."
+    if ip -6 route get 2407:d140:1:100:1111 &> /dev/null; then
+        IP4=$(get_ipv4)
+        IP6=$(get_ipv6)
+        main_interface="eth0"
+        echo "[OKE]: Kết nối IPv6 đã được xác minh"
+        echo "IPv4: $IP4"
+        echo "IPv6: $IP6"
+        echo "Giao diện chính: eth0"
+    else
+        echo "[ERROR]: Kiểm tra kết nối IPv6 thất bại!"
+        exit 1
+    fi
+
+    # Xoay địa chỉ IPv6
+    gen_ipv6_64
+    gen_ifconfig
+    service network restart
+    echo "Địa chỉ IPv6 đã được xoay và cập nhật."
+}
+
+# Function to get IPv4 address
+get_ipv4() {
+    IP4=$(curl -4 -s icanhazip.com)
+    echo "$IP4"
+}
+
+# Function to get IPv6 address
+get_ipv6() {
+    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+    echo "$IP6"
+}
+
+# Function to generate IPv6 addresses
 gen_ipv6_64() {
-	#Backup File
-	rm $WORKDIR/ipv6.txt
-	count_ipv6=1
-	while [ "$count_ipv6" -le $MAXCOUNT ]
-	do
-		array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
-		ip64() {
-			echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-		}
-		echo $IP6:$(ip64):$(ip64):$(ip64):$(ip64):$(ip64) >> $WORKDIR/ipv6.txt
-		let "count_ipv6 += 1"
-	done
+    rm "$WORKDIR/data.txt"
+    for port in $(seq 10000 10999); do
+        array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
+        ip64() {
+            echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+        }
+        echo "$IP6:$(ip64):$(ip64):$(ip64):$(ip64):$(ip64)/$port" >> "$WORKDIR/data.txt"
+    done
 }
 
-gen_3proxy_cfg() {
-	echo daemon
-	echo maxconn 5000
-	echo nserver 1.1.1.1
-	echo nserver [2404:6800:4005:805::1111]
-	echo nserver [2404:6800:4005:805::1001]
-	echo nserver [2404:6800:4005:805::8888]
-	echo nscache 65536
-	echo timeouts 1 5 30 60 180 1800 15 60
-	echo setgid 65535
-	echo setuid 65535
-	echo stacksize 6291456 
-	echo flush
-    echo auth none
-	
-	port=$START_PORT
-	while read ip; do
-		echo "proxy -6 -n -a -p$port -i$IP4 -e$ip"
-		((port+=1))
-	done < $WORKDIR/ipv6.txt
-	echo "proxy -4 -n -a -p$rd -e$IP4"
-	
-}
-
-
+# Function to generate ifconfig commands
 gen_ifconfig() {
-	while read line; do    
-		echo "ifconfig $IFCFG inet6 add $line/64"
-	done < $WORKDIR/ipv6.txt
+    while read -r line; do
+        echo "ifconfig $IFCFG inet6 add $line"
+    done < "$WORKDIR/data.txt" > "$WORKDIR/boot_ifconfig.sh"
 }
 
+# Set up variables
+WORKDIR="/home/cloudfly"
+IFCFG="eth0"
 
-if [ "x$(id -u)" != 'x0' ]; then
-    echo 'Error: this script can only be executed by root'
-    exit 1
-fi
-
-service network restart
-
-ulimit -n 65535
-
-
-
-
-echo "Cáº¥u hÃ¬nh xoay"
-echo "Kiá»m tra káº¿t ná»i IPv6 ..."
-if ip -6 route get 2404:6800:4005:805::1111 &> /dev/null
-then
-	IP4="192.168.1.151"
-	IP6="2001:ee0:0"
-	main_interface="eth0"
-	
-    echo "[OKE]: ThÃ nh cÃ´ng"
-    	echo "IPV4: 192.168.1.151"
-	echo "IPV6: 2001:ee0:0"
-	echo "Máº¡ng chÃ­nh: eth0"
-else
-    echo "[ERROR]:  tháº¥t báº¡i! vui lÃ²ng kiá»m tra láº¡i máº¡ng hoáº·c liÃªn há» https://www.facebook.com/VivuCloud!"
-	exit 1
-fi
-
-rd=6682
-IFCFG="eth0" 
-WORKDIR="/home/xpx/vivucloud"
-m=""
-START_PORT=10000
-MAXCOUNT="5000"
-
-echo "Äang táº¡o $MAXCOUNT IPV6 > ipv6.txt"
-gen_ipv6_64
-
-
-echo "Äang táº¡o IPV6 gen_ifconfig.sh"
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-bash $WORKDIR/boot_ifconfig.sh
-
-echo "Vivu Cloud Proxy Start"
-gen_3proxy_cfg > /etc/3proxy/3proxy.cfg
-killall 3proxy
-service 3proxy start
-
-echo "ÄÃ£ Reset IP thÃ nh cÃ´ng, tool by VivuCloud"
+# Rotate IPv6 addresses
+rotate_ipv6
