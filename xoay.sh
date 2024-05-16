@@ -67,7 +67,7 @@ gen_data() {
 # Function to generate iptables rules
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -h state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -w state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
