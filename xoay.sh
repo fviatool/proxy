@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Variables
+WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
+MAXCOUNT=2222
+IFCFG="eth0"
+FIRST_PORT=10000
+LAST_PORT=10500
+
+
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
     # Check if IPv6 route is available
@@ -79,14 +88,6 @@ download_proxy() {
     cd "$WORKDIR" || return
     curl -F "file=@proxy.txt" https://file.io
 }
-
-# Set up variables
-WORKDIR="/home/cloudfly"
-WORKDATA="${WORKDIR}/data.txt"
-MAXCOUNT=2222
-IFCFG="eth0"
-FIRST_PORT=10000
-LAST_PORT=10500
 
 # Main script starts here
 
