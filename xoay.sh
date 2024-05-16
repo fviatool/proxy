@@ -5,8 +5,8 @@ WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 MAXCOUNT=2222
 IFCFG="eth0"
-FIRST_PORT=10000
-LAST_PORT=15000
+FIRST_PORT=20000
+LAST_PORT=222
 
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
