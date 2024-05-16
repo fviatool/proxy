@@ -149,8 +149,7 @@ install_3proxy() {
     chkconfig --add 3proxy
 }
 
-echo "Installing required packages..."
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
+rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Working folder: $WORKDIR"
 mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
