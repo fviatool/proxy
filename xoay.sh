@@ -137,7 +137,7 @@ EOF
 
 # Function to generate iptables rules
 gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDATA}"
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -h state --state NEW -j ACCEPT"}' "${WORKDATA}"
 }
 
 # Function to download proxy.txt file
