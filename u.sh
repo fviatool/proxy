@@ -18,11 +18,11 @@ install_3proxy() {
     echo "installing 3proxy"
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
-    cd 3proxy-3proxy-0.8.6
+    cd 3proxy-3proxy-0.8.6 || exit
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd $WORKDIR
+    cd $WORKDIR || exit
 }
 
 download_proxy() {
@@ -89,28 +89,38 @@ install_3proxy
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir $WORKDIR && cd $_ || exit
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-FIRST_PORT=10000  # Set a default value for FIRST_PORT
+# Prompt the user to input FIRST_PORT
 while :; do
-  if ((FIRST_PORT >= 10000 && FIRST_PORT <= +1)); then
+  read -p "Enter FIRST_PORT between 10000 and 101000: " FIRST_PORT
+  [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Enter a valid number"; continue; }
+  if ((FIRST_PORT >= 10000 && FIRST_PORT <= 101000)); then
     echo "OK! Valid number"
     break
   else
-    echo "Default port out of range, using default value"
-    break
+    echo "Number out of range, try again"
   fi
 done
 
-LAST_PORT=$((FIRST_PORT + 1000))
+LAST_PORT=$((FIRST_PORT + 999))
 echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."
 
+# Generate proxies
+proxy_count=0
 gen_data >$WORKDIR/data.txt
+while [ $proxy_count -lt 1000 ] && [ $FIRST_PORT -le $LAST_PORT ]; do
+    echo "Creating proxy for port $FIRST_PORT"
+    ((proxy_count++))
+    ((FIRST_PORT++))
+done
+
+echo "Successfully created $proxy_count proxies from port $((FIRST_PORT - proxy_count)) to $((FIRST_PORT - 1))"
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
