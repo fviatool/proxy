@@ -132,6 +132,35 @@ rm -rf /root/3proxy-0.9.4
 
 echo "Starting Proxy"
 
+check_ipv6_live() {
+    local ipv6_address=$1
+    ping6 -c 3 $ipv6_address
+}
+
+# Sử dụng hàm để kiểm tra tính sống của một địa chỉ IPv6 cụ thể
+check_all_ipv6_live() {
+    ip -6 addr | grep inet6 | while read -r line; do
+        address=$(echo "$line" | awk '{print $2}')
+        ip6=$(echo "$address" | cut -d'/' -f1)
+        ping6 -c 1 $ip6 > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "$ip6 is live"
+        else
+            echo "$ip6 is not live"
+        fi
+    done
+}
+check_all_ips
+check_all_ipv6_live
+
+check_all_ips() {
+    while IFS= read -r line; do
+        ipv6=$(echo "$line" | cut -d '/' -f 5)
+        echo "Kiểm tra IPv6: $ipv6"
+        ping6 -c 3 $ipv6
+        echo "-----------------------------------"
+    done < /home/cloudfly/data.txt
+}
 echo "Number of IPv6 Addresses Currently:"
 ip -6 addr | grep inet6 | wc -l
 download_proxy
