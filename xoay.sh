@@ -156,7 +156,9 @@ rm -rf /root/3proxy-0.9.4
 echo "Working folder: $WORKDIR"
 mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
 
-# Tạo cấu hình 3proxy
+# Install 3proxy
+install_3proxy
+
 gen_3proxy > "/usr/local/etc/3proxy/3proxy.cfg"
 
 # Tạo dữ liệu cho các địa chỉ IPv6
