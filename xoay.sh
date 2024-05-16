@@ -67,7 +67,7 @@ gen_data() {
 # Function to generate iptables rules
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -h state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
@@ -154,9 +154,6 @@ bash /etc/rc.local
 # Generate proxy file for user
 gen_proxy_file_for_user
 
-# Download proxy file
-download_proxy
-
 # Clean up
 rm -rf /root/3proxy-3proxy-0.8.6
 
@@ -171,11 +168,8 @@ rotate_auto_ipv6() {
 }
 echo "Xoay Proxy 10p"
 
-echo "Starting Proxy"
 echo "Number of current IPv6 addresses:"
 ip -6 addr | grep inet6 | wc -l
 
-rotate_auto_ipv6
 download_proxy
-# Rotate IPv6
-rotate_ipv6
+rotate_auto_ipv6
