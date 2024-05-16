@@ -201,8 +201,10 @@ fi
 echo "Starting Proxy"
 echo "Number of current IPv6 addresses:"
 ip -6 addr | grep inet6 | wc -l
+download_proxy
 
-echo "3proxy setup completed."
+echo "3proxy dang xoay tu dong..."
+
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
     while true; do
@@ -228,7 +230,3 @@ rotate_ipv6() {
 rotate_auto_ipv6 &
 # Chạy hàm rotate_ipv6 để cài đặt xoay IPv6
 rotate_ipv6
-echo "Number of current IPv6 addresses:"
-ip -6 addr | grep inet6 | wc -l
-download_proxy
-
