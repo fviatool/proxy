@@ -16,10 +16,10 @@ if [ -n "$ipv6_address" ]; then
     )
 
     declare -A gateways=(
-        [4]="fe80::1%13:$IPC::1"
-        [5]="fe80::1%13:$IPC::1"
-        [244]="fe80::1%13:$IPC::1"
-        ["default"]="fe80::1%13:$IPC::1"
+        [4]="2001:ee0:4f9b:$IPC::1"
+        [5]="2001:ee0:4f9b:$IPC::1"
+        [244]="2001:ee0:4f9b3:$IPC::1"
+        ["default"]="2001:ee0:4f9b:$IPC::1"
     )
 
     # Get IPv4 third and fourth octets
