@@ -109,16 +109,15 @@ rotate_ipv6() {
     echo "IPv6 rotated and updated."
 }
 
-# Hàm gen_ipv6_64 tạo địa chỉ IPv6
 gen_ipv6_64() {
-    rm "$WORKDIR/data.txt" 2>/dev/null
-    count_ipv6=1
+    if [ -f "$WORKDATA" ]; then
+        rm "$WORKDATA"
+    fi
+    local ipv6_prefix="$1"
+    local count_ipv6=1
     while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
-        array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
-        ip64() {
-            echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-        }
-        echo "$IP6:$(ip64):$(ip64):$(ip64):$(ip64):$(ip64)" >> "$WORKDATA"
+        local ipv6_address="$ipv6_prefix:$(ip64):$(ip64):$(ip64):$(ip64)"
+        echo "$ipv6_address" >> "$WORKDATA"
         let "count_ipv6 += 1"
     done
 }
