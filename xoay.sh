@@ -77,17 +77,17 @@ rotate_ipv6() {
     echo "IPv6 rotated and updated."
 }
 
-# Function to install 3proxy
 install_3proxy() {
-    cd $WORKDIR
-    wget https://github.com/z3APA3A/3proxy/archive/refs/tags/0.8.6.tar.gz
-    tar -xzf 0.8.6.tar.gz
-    cd 3proxy-0.8.6
+    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-0.9.4
     make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/bin
-    cp src/3proxy /usr/local/etc/3proxy/bin/
-    cp ./scripts/rc.d/init.d/3proxy /etc/init.d/
-    chkconfig --add 3proxy
+    mkdir -p /usr/local/etc/3proxy/{bin,stat}
+    cp bin/3proxy /usr/local/etc/3proxy/bin/
+    cp ../init.d/3proxy.sh /etc/init.d/3proxy
+    chmod +x /etc/init.d/3proxy
+    chkconfig 3proxy on
+    cd $WORKDIR
 }
 
 # Function to generate IPv6 addresses
@@ -150,16 +150,10 @@ download_proxy() {
 echo "Installing necessary packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
-rm -rf /root/3proxy-3proxy-0.8.6
+rm -rf /root/3proxy-0.9.4
 
 echo "Working folder: $WORKDIR"
 mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
-
-# Run rotate_ipv6 function to set up IPv6 rotation
-rotate_ipv6
-
-# Install 3proxy
-install_3proxy
 
 # Generate 3proxy configuration
 gen_3proxy > "/usr/local/etc/3proxy/3proxy.cfg"
@@ -196,4 +190,7 @@ rotate_auto_ipv6() {
 # Khởi động xoay IPv6 tự động
 
 rotate_auto_ipv6 &
+# Run rotate_ipv6 function to set up IPv6 rotation
+rotate_ipv6
+
 download_proxy
