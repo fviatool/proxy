@@ -98,11 +98,16 @@ echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
 FIRST_PORT=10000
 LAST_PORT=101000
+proxy_count=0
 
-for ((port=$FIRST_PORT; port<=$LAST_PORT; port++)); do
-    echo "Tao Tao Proxy Voi Cong $port"
-    # Thực hiện tạo proxy cho cổng $port ở đây
+while [ $proxy_count -lt 1000 ] && [ $FIRST_PORT -le $LAST_PORT ]; do
+    echo "Creating proxy for port $FIRST_PORT"
+    # Thực hiện tạo proxy cho cổng $FIRST_PORT ở đây
+    ((proxy_count++))
+    ((FIRST_PORT++))
 done
+
+echo "Tạo thành công $proxy_count proxy từ cổng $((FIRST_PORT - proxy_count)) đến $((FIRST_PORT - 1))"
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
