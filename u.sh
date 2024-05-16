@@ -96,6 +96,13 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
+FIRST_PORT=10000
+LAST_PORT=101000
+
+for ((port=$FIRST_PORT; port<=$LAST_PORT; port++)); do
+    echo "Tao Tao Proxy Voi Cong $port"
+    # Thực hiện tạo proxy cho cổng $port ở đây
+done
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
