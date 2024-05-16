@@ -31,7 +31,7 @@ rotate_ipv6() {
 
 # Function to generate IPv6 addresses
 gen_ipv6_64() {
-    rm "$WORKDIR/data.txt"
+    rm -f "$WORKDIR/data.txt"
     count_ipv6=1
     while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
         array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
@@ -67,7 +67,7 @@ gen_data() {
 # Function to generate iptables rules
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -w -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
@@ -123,6 +123,17 @@ mkdir -p $WORKDIR && cd $WORKDIR
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
+# Check if IPs were retrieved successfully
+if [ -z "$IP4" ]; then
+    echo "[ERROR]: Unable to retrieve IPv4 address!"
+    exit 1
+fi
+
+if [ -z "$IP6" ]; then
+    echo "[ERROR]: Unable to retrieve IPv6 address!"
+    exit 1
+fi
+
 echo "Internal IP = ${IP4}, External sub for IPv6 = ${IP6}"
 
 # Generate data
@@ -139,6 +150,12 @@ chmod +x $WORKDIR/boot_ifconfig.sh
 # Generate 3proxy configuration
 gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
+# Ensure /usr/local/etc/3proxy/bin/3proxy exists
+if [ ! -f /usr/local/etc/3proxy/bin/3proxy ]; then
+    echo "[ERROR]: 3proxy binary not found!"
+    exit 1
+fi
+
 # Update /etc/rc.local to start on boot
 cat <<EOF >> /etc/rc.local
 bash ${WORKDIR}/boot_iptables.sh
@@ -154,15 +171,21 @@ bash /etc/rc.local
 # Generate proxy file for user
 gen_proxy_file_for_user
 
-# Download proxy file
-download_proxy
-
 # Clean up
 rm -rf /root/3proxy-3proxy-0.8.6
 
-# Rotate IPv6
-rotate_ipv6
+# Function to rotate IPv6 addresses automatically every 10 minutes
+rotate_auto_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 600  # Wait for 10 minutes
+    done
+}
+echo "Xoay Proxy 10p"
 
 echo "Starting Proxy"
 echo "Number of current IPv6 addresses:"
 ip -6 addr | grep inet6 | wc -l
+
+rotate_auto_ipv6
+download_proxy
