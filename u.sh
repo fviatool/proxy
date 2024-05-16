@@ -111,16 +111,6 @@ FIRST_PORT=10000
 LAST_PORT=$((FIRST_PORT + 999))
 echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."
 
-# Generate proxies
-proxy_count=0
-gen_data >$WORKDIR/data.txt
-while [ $proxy_count -lt 1000 ] && [ $FIRST_PORT -le $LAST_PORT ]; do
-    echo "Creating proxy for port $FIRST_PORT"
-    ((proxy_count++))
-    ((FIRST_PORT++))
-done
-
-echo "Successfully created $proxy_count proxies from port $((FIRST_PORT - proxy_count)) to $((FIRST_PORT - 1))"
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
