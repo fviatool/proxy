@@ -1,37 +1,71 @@
 #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-curl -sO https://raw.githubusercontent.com/fviatool/proxy/main/i.sh && chmod +x i.sh && bash i.sh
+# Function to generate a random string
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
 }
 
-array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+# Function to generate a random IPv6 address segment
+ip64() {
+    echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+}
 
+# Function to generate a full IPv6 address
 gen64() {
-    ip64() {
-        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-    }
     echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
-install_3proxy() {
-    echo "Installing 3proxy..."
-    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- $URL | tar -xvf-
-    cd 3proxy-3proxy-0.8.6
-    make -f Makefile.Linux
-    mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
-    cp src/3proxy /usr/local/etc/3proxy/bin/
-    cd $WORKDIR || exit 1
+# Function to auto-detect the network interface
+auto_detect_interface() {
+    INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
 }
 
-download_proxy() {
-    cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://file.io
+# Function to rotate IPv6 addresses
+rotate_ipv6() {
+    while true; do
+        IP4=$(curl -4 -s icanhazip.com)
+        IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+        main_interface="eth0"
+        echo "IPv4: $IP4"
+        echo "IPv6: $IP6"
+        echo "Main interface: $main_interface"
+
+        # Rotate IPv6 addresses
+        gen_ipv6_64
+        gen_ifconfig
+        service network restart
+        echo "IPv6 rotated and updated."
+
+        # Delay before next rotation
+        sleep 300  # Wait for 5 minutes before updating again
+    done
 }
 
+# Function to generate IPv6 addresses and save to file
+gen_ipv6_64() {
+    if [ -f "$WORKDATA" ]; then
+        rm "$WORKDATA"
+    fi
+    local ipv6_prefix="$1"
+    local count_ipv6=1
+    while [ "$count_ipv6" -le "$MAXCOUNT" ]; do
+        local ipv6_address="$ipv6_prefix:$(ip64):$(ip64):$(ip64):$(ip64)"
+        echo "$ipv6_address" >> "$WORKDATA"
+        let "count_ipv6 += 1"
+    done
+}
+
+# Function to generate ifconfig commands and save to file
+gen_ifconfig() {
+    while read -r line; do
+        echo "ifconfig $IFCFG inet6 add $line/64"
+    done < "$WORKDATA" > "$WORKDIR/boot_ifconfig.sh"
+    chmod +x "$WORKDIR/boot_ifconfig.sh"
+}
+
+# Function to generate 3proxy configuration and save to file
 gen_3proxy() {
     cat <<EOF
 daemon
@@ -54,78 +88,102 @@ $(awk -F "/" '{print "\n" \
 EOF
 }
 
+# Function to generate proxy file for users
 gen_proxy_file_for_user() {
     awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA} > proxy.txt
 }
 
-gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "//$IP4/$port/$(gen64 $IP6)"
-    done
+# Function to download proxy file
+download_proxy() {
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
 }
 
-echo "Thu Muc folder = /home/cloudfly"
+# Function to install 3proxy
+install_3proxy() {
+    URL="https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-0.9.4
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/{bin,stat}
+    cp bin/3proxy /usr/local/etc/3proxy/bin/
+    cp ../init.d/3proxy.sh /etc/init.d/3proxy
+    chmod +x /etc/init.d/3proxy
+    chkconfig 3proxy on
+    cd $WORKDIR
+}
+
+# Setting environment variables
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p $WORKDIR && cd $_ || exit 1
+MAXCOUNT=2222
+IFCFG="eth0"
 
-read -p "Nhap IPv4: " IP4
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+# Install necessary packages
+echo "Installing necessary packages..."
+yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
-echo "Internal IP = ${IP4}. External subnet for IPv6 = ${IP6}"
+# Remove existing 3proxy installation
+rm -rf /root/3proxy-0.9.4
 
-echo "Generating proxy data..."
-while true; do
-  read -p "Nhap So Luong Muon Tao: " PORT_COUNT
-  [[ $PORT_COUNT =~ ^[0-9]+$ ]] || { echo "Nhap mot so nguyen duong."; continue; }
-  if ((PORT_COUNT > 0)); then
-    echo "OK! So luong hop le"
-    FIRST_PORT=$(($(od -An -N2 -i /dev/urandom) % 80001 + 10000))
-    if [[ $FIRST_PORT =~ ^[0-9]+$ ]] && ((FIRST_PORT >= 10000 && FIRST_PORT <= 80000)); then
-      echo "Cổng ngẫu nhiên đã được tạo: $FIRST_PORT."
-      LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
-      echo "Dải cổng ngẫu nhiên là từ $FIRST_PORT đến $LAST_PORT."
-      break
-    else
-      echo "Cổng ngẫu nhiên nằm ngoài phạm vi cho phép, vui lòng thử lại."
-    fi
-  else
-    echo "Số lượng phải lớn hơn 0, vui lòng thử lại."
-  fi
-done
+echo "Working folder: $WORKDIR"
+mkdir -p "$WORKDIR" && cd "$WORKDIR" || exit
 
-gen_data >$WORKDIR/data.txt
+# Install 3proxy
+install_3proxy
 
-gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
-}
-
-gen_ifconfig() {
-    awk -F "/" '{print "ifconfig ens33 inet6 add " $5 "/64"}' ${WORKDATA}
-}
-
-gen_ifconfig() {
-    awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA}
-}
-
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x boot_*.sh /etc/rc.local
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
-
-cat << EOF > /etc/rc.local
-#!/bin/bash
-touch /var/lock/subsys/local
-bash ${WORKDIR}/boot_iptables.sh
-bash ${WORKDIR}/boot_ifconfig.sh
+# Generate 3proxy configuration
+gen_3proxy > "/usr/local/etc/3proxy/3proxy.cfg"
 ulimit -n 10048
-/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
-EOF
 
-sudo chmod +x /etc/rc.local
-sudo systemctl enable rc-local
+# Start 3proxy
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg &
 
-sudo /etc/rc.local
+# Generate IPv6 data
+gen_ipv6_64
+
+# Generate ifconfig commands
+gen_ifconfig
+
+# Generate iptables rules and apply them
+gen_iptables | bash
 
 echo "Starting Proxy"
+echo "Number of current IPv6 addresses:"
+ip -6 addr | grep inet6 | wc -l
 download_proxy
+
+echo "3proxy auto rotation enabled..."
+
+# Start automatic IPv6 rotation
+rotate_ipv6 &
+
+check_ipv6_live() {
+    local ipv6_address=$1
+    ping6 -c 3 $ipv6_address
+}
+
+# Sử dụng hàm để kiểm tra tính sống của một địa chỉ IPv6 cụ thể
+check_all_ipv6_live() {
+    ip -6 addr | grep inet6 | while read -r line; do
+        address=$(echo "$line" | awk '{print $2}')
+        ip6=$(echo "$address" | cut -d'/' -f1)
+        ping6 -c 1 $ip6 > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            echo "$ip6 is live"
+        else
+            echo "$ip6 is not live"
+        fi
+    done
+}
+check_all_ips
+check_all_ipv6_live
+
+check_all_ips() {
+    while IFS= read -r line; do
+        ipv6=$(echo "$line" | cut -d '/' -f 5)
+        echo "Kiểm tra IPv6: $ipv6"
+        ping6 -c 3 $ipv6
+        echo "-----------------------------------"
+    done < /home/cloudfly/data.txt
+}
