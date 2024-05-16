@@ -140,12 +140,6 @@ gen_iptables() {
 EOF
 }
 
-# Lặp vô hạn để cập nhật địa chỉ IPv6 sau mỗi 5 phút
-while true; do
-    rotate_ipv6
-    sleep 300  # Chờ 5 phút trước khi cập nhật lại
-done
-
 # Hàm download_proxy tải tệp proxy.txt
 download_proxy() {
     cd /home/cloudfly || return
@@ -186,10 +180,24 @@ echo "Number of current IPv6 addresses:"
 ip -6 addr | grep inet6 | wc -l
 
 echo "3proxy setup completed."
-rotate_auto_ipv6() {
+# Function to rotate IPv6 addresses
+rotate_ipv6() {
     while true; do
-        rotate_ipv6
-        sleep 600  # Đợi 10 phút
+        IP4=$(curl -4 -s icanhazip.com)
+        IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+        main_interface="eth0"
+        echo "IPv4: $IP4"
+        echo "IPv6: $IP6"
+        echo "Main interface: $main_interface"
+
+        # Rotate IPv6 addresses
+        gen_ipv6_64
+        gen_ifconfig
+        service network restart
+        echo "IPv6 rotated and updated."
+
+        # Delay before next rotation
+        sleep 300  # Chờ 5 phút trước khi cập nhật lại
     done
 }
 
