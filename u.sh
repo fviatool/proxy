@@ -13,7 +13,7 @@ gen64() {
     ip64() {
         echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
     }
-    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)" > "${WORKDATA}/ipv6.txt"
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)" >> "${WORKDATA}/ipv6.txt"
 }
 
 # Function to install 3proxy
@@ -68,7 +68,7 @@ EOF
 
 # Function to generate data for proxies
 gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
+    for port in $(seq $FIRST_PORT $LAST_PORT); do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
@@ -111,6 +111,8 @@ FIRST_PORT=10000
 LAST_PORT=$((FIRST_PORT + 999))
 echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."
 
+# Generate proxies
+gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x ${WORKDIR}/boot_*.sh /etc/rc.local
