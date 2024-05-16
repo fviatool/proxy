@@ -59,7 +59,7 @@ EOF
 }
 
 gen_data() {
-    seq 10000 101000 | while read port; do
+    seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
