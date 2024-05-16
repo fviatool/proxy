@@ -77,13 +77,6 @@ rotate_ipv6() {
     echo "IPv6 rotated and updated."
 }
 
-    # Rotate IPv6 addresses
-    gen_ipv6_64
-    gen_ifconfig
-    service network restart
-    echo "IPv6 rotated and updated."
-}
-
 # Function to generate IPv6 addresses
 gen_ipv6_64() {
     rm "$WORKDIR/data.txt"
@@ -136,11 +129,25 @@ gen_iptables() {
 
 # Function to download proxy.txt file
 download_proxy() {
-    cd "$WORKDIR" || return
+    cd /home/cloudfly || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
-# Main script starts here
+# Installation steps
+echo "Installing necessary packages..."
+yum -y install wget gcc net-tools bsdtar zip >/dev/null
+
+install_3proxy() {
+    cd $WORKDIR
+    wget https://github.com/z3APA3A/3proxy/archive/refs/tags/0.8.6.tar.gz
+    tar -xzf 0.8.6.tar.gz
+    cd 3proxy-0.8.6
+    make -f Makefile.Linux
+    mkdir -p /usr/local/etc/3proxy/bin
+    cp src/3proxy /usr/local/etc/3proxy/bin/
+    cp ./scripts/rc.d/init.d/3proxy /etc/init.d/
+    chkconfig --add 3proxy
+}
 
 echo "Installing required packages..."
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
@@ -184,5 +191,6 @@ rotate_auto_ipv6() {
 }
 
 # Khởi động xoay IPv6 tự động
+
 rotate_auto_ipv6 &
 download_proxy
