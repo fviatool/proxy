@@ -11,7 +11,7 @@ LAST_PORT=10500
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
     echo "Checking IPv6 connectivity ..."
-    if ip -6 route get 2407:d140:1:100:1111 &> /dev/null; then
+    if ip -6 route get 2403:6a40:0:91:1111 &> /dev/null; then
         IP4=$(curl -4 -s icanhazip.com)
         IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
         echo "[OK]: Connectivity verified"
