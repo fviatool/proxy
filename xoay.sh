@@ -1,4 +1,4 @@
-#!/bin/sh
+ #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -176,10 +176,11 @@ reset_3proxy() {
     # Khởi động lại 3proxy
     3proxy /usr/local/etc/3proxy/3proxy.cfg &
 }
+
 # Hàm cập nhật địa chỉ IPv6 và reset 3proxy
 update_ipv6_and_reset() {
-    
-    echo "Updating IPv6 Address: $ipv6_address"
+    new_ipv6=$(gen64 $IP6)
+    echo "Updating IPv6 Address: $new_ipv6"
 
     # Cập nhật địa chỉ IPv6 cho proxy
     sed -i "s/proxy -6 -n -a -p[0-9]* -i[0-9.]* -e[0-9a-f:]*$/proxy -6 -n -a -p${FIRST_PORT} -i${IP4} -e${new_ipv6}/" /usr/local/etc/3proxy/3proxy.cfg
