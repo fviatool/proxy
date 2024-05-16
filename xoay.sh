@@ -108,8 +108,9 @@ gen_ifconfig() {
     while read -r line; do
         echo "ifconfig $IFCFG inet6 add $line/64"
     done < "$WORKDATA" > "$WORKDIR/boot_ifconfig.sh"
-    chmod +x "$WORKDIR/boot_ifconfig.sh"  # Sửa lại dòng này
+    chmod +x "$WORKDIR/boot_ifconfig.sh"
 }
+
 # Hàm gen_3proxy tạo cấu hình 3proxy
 gen_3proxy() {
     cat <<EOF
