@@ -96,16 +96,19 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-FIRST_PORT=10000
-LAST_PORT=101000
-proxy_count=0
-
-while [ $proxy_count -lt 1000 ] && [ $FIRST_PORT -le $LAST_PORT ]; do
-    echo "Successfully created $proxy_count proxies from port $((FIRST_PORT - proxy_count)) to $((FIRST_PORT - 1))"
-    ((proxy_count++))  # Increment proxy_count
+FIRST_PORT=10000  # Set a default value for FIRST_PORT
+while :; do
+  if ((FIRST_PORT >= 10000 && FIRST_PORT <= +1)); then
+    echo "OK! Valid number"
+    break
+  else
+    echo "Default port out of range, using default value"
+    break
+  fi
 done
 
-echo "LAST_PORT is $LAST_PORT. Continue..."
+LAST_PORT=$((FIRST_PORT + 1000))
+echo "FIRST_PORT is $FIRST_PORT. LAST_PORT is $LAST_PORT. Continuing..."
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
