@@ -1,5 +1,9 @@
 #!/bin/bash
 
+Hàm kiểm tra và chọn tên giao diện mạng tự động
+auto_detect_interface() {
+    INTERFACE=$(ip -o link show | awk -F': ' '$3 !~ /lo|vir|^[^0-9]/ {print $2; exit}')
+}
 # Get IPv6 address
 ipv6_address=$(ip addr show eth0 | awk '/inet6/{print $2}' | grep -v '^fe80' | head -n1)
 
@@ -136,9 +140,16 @@ EOF
 }
 
 # Function to generate iptables rules
-gen_iptables() {
-    awk -F "/" '{print "iptables -A INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' "${WORKDATA}"
+    cat <<EOF
+    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport "$4"  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+EOF
 }
+
+# Hàm cập nhật thông tin giao diện mạng tự động
+update_network_info() {
+    auto_detect_interface
+}
+
 
 # Function to download proxy.txt file
 download_proxy() {
