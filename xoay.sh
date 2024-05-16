@@ -1,4 +1,4 @@
-#!/bin/bash
+#!#!/bin/bash
 
 # Function to rotate IPv6 addresses
 rotate_ipv6() {
@@ -123,3 +123,12 @@ ip -6 addr | grep inet6 | wc -l
 download_proxy
 
 echo "3proxy setup completed."
+rotate_auto_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 600  # Đợi 10 phút
+    done
+}
+
+# Khởi động xoay IPv6 tự động
+rotate_auto_ipv6 &
