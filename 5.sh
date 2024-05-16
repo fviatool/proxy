@@ -57,6 +57,7 @@ else
     echo "No IPv6 address obtained."
 fi
 
+service network restart
 
 random() {
 	tr </dev/urandom -dc A-Za-z0-9 | head -c5
