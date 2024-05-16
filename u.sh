@@ -25,6 +25,11 @@ install_3proxy() {
     cd $WORKDIR
 }
 
+download_proxy() {
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
+}
+
 gen_3proxy() {
     cat <<EOF
 daemon
@@ -148,3 +153,6 @@ rotate_auto_ipv6() {
 
 # Start automatic IPv6 rotation
 rotate_auto_ipv6 &
+echo "So Luong IPv6 Hien Tai:"
+ip -6 addr | grep inet6 | wc -l
+download_proxy
