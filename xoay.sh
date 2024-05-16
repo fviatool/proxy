@@ -145,12 +145,6 @@ EOF
 EOF
 }
 
-# Hàm cập nhật thông tin giao diện mạng tự động
-update_network_info() {
-    auto_detect_interface
-}
-
-
 # Function to download proxy.txt file
 download_proxy() {
     cd /home/cloudfly || return
