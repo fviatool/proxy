@@ -107,11 +107,11 @@ while [ $proxy_count -lt 1000 ] && [ $FIRST_PORT -le $LAST_PORT ]; do
     ((FIRST_PORT++))
 done
 
-echo "Tạo thành công $proxy_count proxy từ cổng $((FIRST_PORT - proxy_count)) đến $((FIRST_PORT - 1))"
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x boot_*.sh /etc/rc.local
+echo "Successfully created $proxy_count proxies from port $((FIRST_PORT - proxy_count)) to $((FIRST_PORT - 1))"
+gen_data > $WORKDIR/data.txt
+gen_iptables > $WORKDIR/boot_iptables.sh
+gen_ifconfig > $WORKDIR/boot_ifconfig.sh
+chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
@@ -127,6 +127,6 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
 
-echo "So Luong IPv6 Hien Tai:"
+echo "Number of IPv6 Addresses Currently:"
 ip -6 addr | grep inet6 | wc -l
 download_proxy
