@@ -27,7 +27,7 @@ gen_ifconfig() {
 # Function to generate proxy data and save to file
 gen_data() {
     FIRST_PORT=10000  # Starting port
-    PORT_COUNT=10  # Number of ports to create
+    PORT_COUNT=500  # Number of ports to create
 
     if ((PORT_COUNT > 0)); then
         LAST_PORT=$((FIRST_PORT + PORT_COUNT - 1))
