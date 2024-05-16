@@ -197,24 +197,3 @@ rotate_auto_ipv6() {
 
 rotate_auto_ipv6 &
 download_proxy
-```
-
-Mã này đã được cập nhật để thêm quy trình cài đặt 3proxy và sửa lỗi khi khởi động IPv6.
-
-
-echo "Starting Proxy"
-echo "Number of current IPv6 addresses:"
-ip -6 addr | grep inet6 | wc -l
-
-echo "3proxy setup completed."
-rotate_auto_ipv6() {
-    while true; do
-        rotate_ipv6
-        sleep 600  # Đợi 10 phút
-    done
-}
-
-# Khởi động xoay IPv6 tự động
-
-rotate_auto_ipv6 &
-download_proxy
