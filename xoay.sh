@@ -82,7 +82,7 @@ EOF
 
 # Hàm gen_iptables tạo luật iptables
 gen_iptables() {
-    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -h state --state NEW -j ACCEPT"}' ${WORKDATA}
 }
 
 # Hàm download_proxy tải tệp proxy.txt
@@ -134,6 +134,9 @@ gen_ifconfig
 
 # Tạo luật iptables và thực hiện chúng
 gen_iptables | bash
+ulimit -n 10048
+/usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+EOF
 
 # Khởi động dịch vụ 3proxy
 if [[ -x "/usr/local/etc/3proxy/bin/3proxy" ]]; then
