@@ -140,9 +140,12 @@ bash ${WORKDIR}/boot_ifconfig.sh
 ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
+sudo systemctl restart iptables
 
 bash /etc/rc.local
 
+gen_proxy_file_for_user
+rm -rf /root/3proxy-3proxy-0.8.6
 while true; do
     display_menu
     read -p "Choose an option (1-4): " choice
