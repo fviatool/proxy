@@ -1,5 +1,13 @@
 #!/bin/bash
+
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+
+NETWORK_INTERFACE=$(ip route get 1 | awk 'NR==1 {print $(NF-2); exit}')
+echo "Detected network interface: $NETWORK_INTERFACE"
+
+# Ensure the network interface is up
+sudo ip link set dev $NETWORK_INTERFACE up
 
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
@@ -63,22 +71,21 @@ EOF
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "user$port/$(random)/$IP4/$port/$(gen64 $IP6)"
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 " -m state --state NEW -j ACCEPT"}' ${WORKDATA})
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
 EOF
 }
 
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+$(awk -F "/" '{print "ifconfig $NETWORK_INTERFACE inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
-
 
 rotate_ipv6() {
     while true; do
