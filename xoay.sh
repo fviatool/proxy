@@ -87,7 +87,7 @@ gen_iptables() {
 
 # Hàm download_proxy tải tệp proxy.txt
 download_proxy() {
-    cd /home/cloudfly || return
+    $WORKDIR/proxy || return
     curl -F "file=@proxy.txt" https://file.io
 }
 
