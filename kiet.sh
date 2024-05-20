@@ -73,11 +73,7 @@ $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 " -m state --state N
 EOF
 }
 
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ip -6 addr add " $5 "/64 dev eth0"}' ${WORKDATA})
-EOF
-}
+true
 
 rotate_ipv6() {
     while true; do
@@ -105,13 +101,13 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 echo "Internal IP = ${IP4}, External sub for IPv6 = ${IP6}"
 
 FIRST_PORT=22000
-LAST_PORT=22700
+LAST_PORT=220010
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 
-chmod +x $WORKDIR/boot_iptables.sh
+chmod +chmod +x $WORKDIR/boot_iptables.sh
 chmod +x $WORKDIR/boot_ifconfig.sh
 chmod +x /etc/rc.local
 
