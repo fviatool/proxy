@@ -73,7 +73,12 @@ $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 " -m state --state N
 EOF
 }
 
-true
+gen_ifconfig() {
+    cat <<EOF
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+EOF
+}
+
 
 rotate_ipv6() {
     while true; do
@@ -125,7 +130,7 @@ echo "LAST_PORT is $LAST_PORT. Continuing..."
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x $WORKDIR/boot_*.sh /etc/rc.local
+chmod +x boot_*.sh /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
