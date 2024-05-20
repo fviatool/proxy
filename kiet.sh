@@ -70,13 +70,14 @@ EOF
 
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
+$(awk -F "/" '{print "ip -6 addr add " $5 "/64 dev eth0"}' ${WORKDATA})
 EOF
 }
 
 rotate_ipv6() {
     while true; do
         echo "Rotating IPv6 addresses..."
+        ip -6 addr flush dev eth0
         gen_ifconfig >$WORKDIR/boot_ifconfig.sh
         bash $WORKDIR/boot_ifconfig.sh
         sleep 3600
@@ -98,8 +99,8 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal IP = ${IP4}, External sub for IPv6 = ${IP6}"
 
-FIRST_PORT=20000
-LAST_PORT=25000
+FIRST_PORT=22000
+LAST_PORT=22700
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
@@ -107,7 +108,7 @@ gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 
 chmod +x $WORKDIR/boot_iptables.sh
 chmod +x $WORKDIR/boot_ifconfig.sh
-chmod +x $WORKDIR/boot_*.sh /etc/rc.local
+chmod +x /etc/rc.local
 
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
