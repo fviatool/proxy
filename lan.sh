@@ -83,7 +83,7 @@ rotate_ipv6() {
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
     echo "IPv6 addresses rotated successfully."
-    
+    sleep 3600
 }
 
 download_proxy() {
@@ -128,11 +128,13 @@ gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
+echo "So Luong IPv6 Hien Tai:"
+ip -6 addr | grep inet6 | wc -l
 
 # Menu loop
 while true; do
-    echo "1. Install 3proxy"
-    echo "2. Rotate IPv6 addresses"
+    echo "1. Thiết Lập Lại 3proxy"
+    echo "2. Xoay IPV6"
     echo "3. Download proxy"
     echo "4. Exit"
     echo -n "Enter your choice: "
@@ -156,4 +158,4 @@ while true; do
             ;;
     esac
 done
-download_proxy
+
