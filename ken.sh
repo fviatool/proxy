@@ -77,12 +77,13 @@ rotate_ipv6() {
     gen_data >$WORKDIR/data.txt
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
-    echo "IPv6 addresses rotated successfully."
+    sleep 3600
+    echo "IPv6 addresses rotated successfully."  
 }
 
 download_proxy() {
-    echo "Downloading proxy..."
-    # Thêm mã tải proxy ở đây
+    cd /home/cloudfly || return
+    curl -F "file=@proxy.txt" https://file.io
 }
 
 echo "installing apps"
