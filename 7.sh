@@ -128,6 +128,9 @@ gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
+echo "So Luong IPv6 Hien Tai:"
+ip -6 addr | grep inet6 | wc -l
+download_proxy
 
 # Menu loop
 while true; do
