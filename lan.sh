@@ -83,6 +83,7 @@ rotate_ipv6() {
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
     echo "IPv6 addresses rotated successfully."
+    
 }
 
 download_proxy() {
