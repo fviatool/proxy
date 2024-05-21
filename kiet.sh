@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -15,41 +15,33 @@ gen64() {
 }
 
 install_3proxy() {
-    echo "Installing 3proxy"
-    URL="https://github.com/z3APA3A/3proxy/archive/refs/tags/0.8.13.tar.gz"
-    wget -qO- $URL | tar -xzvf-
-    cd 3proxy-0.8.13
+    echo "Installing 3proxy..."
+    URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
+    wget -qO- $URL | bsdtar -xvf-
+    cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
 }
 
-download_proxy() {
-    cd /home/cloudfly || return
-    curl -F "file=@proxy.txt" https://file.io
-}
-
 gen_3proxy() {
     cat <<EOF
 daemon
-maxconn 4000
+maxconn 2000
 nserver 1.1.1.1
 nserver 8.8.4.4
-nserver 2004:4860:4860::8888
-nserver 2004:4860:4860::8844
+nserver 2001:4860:4860::8888
+nserver 2001:4860:4860::8844
 nscache 65536
 timeouts 1 5 30 60 180 1800 15 60
 setgid 65535
 setuid 65535
-stacksize 6291456
+stacksize 6291456 
 flush
-auth strong
 
-users $(awk -F "/" 'BEGIN{ORS="";} {print $1 ":CL:" $2 " "}' ${WORKDATA})
-
-$(awk -F "/" '{print "auth strong\n" \
-"allow " $1 "\n" \
+$(awk -F "/" '{print "\n" \
+"" $1 "\n" \
 "proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
 "flush\n"}' ${WORKDATA})
 EOF
@@ -63,54 +55,61 @@ EOF
 
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo "user$port/$(random)/$IP4/$port/$(gen64 $IP6)"
+        echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 " -m state --state NEW -j ACCEPT"}' ${WORKDATA})
+$(awk -F "/" '{print "iptables -w -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA})
 EOF
 }
 
-true
-
-rotate_ipv6() {
-    while true; do
-        echo "Rotating IPv6 addresses..."
-        ip -6 addr flush dev eth0
-        gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-        bash $WORKDIR/boot_ifconfig.sh
-        sleep 3600
-    done
+gen_ifconfig() {
+    cat <<EOF
+$(awk -F "/" '{print "ip -6 addr add " $5 "/64 dev eth0"}' ${WORKDATA})
+EOF
 }
 
-echo "Installing dependencies"
-yum -y install gcc net-tools bsdtar zip curl >/dev/null
+setup_environment() {
+    echo "Installing necessary packages"
+    yum -y install gcc net-tools bsdtar zip make >/dev/null
+}
 
-install_3proxy
+rotate_ipv6() {
+    echo "Rotating IPv6 addresses..."
+    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+    gen_data >$WORKDIR/data.txt
+    gen_ifconfig >$WORKDIR/boot_ifconfig.sh
+    bash $WORKDIR/boot_ifconfig.sh
+    echo "IPv6 addresses rotated successfully."
+}
 
-echo "Setting up working directory"
-WORKDIR="/home/bkns"
+download_proxy() {
+    cd $WORKDIR || exit 1
+    curl -F "proxy.txt=@proxy.txt" https://transfer.sh
+}
+
+echo "working folder = /home/cloudfly"
+WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir -p $WORKDIR && cd $WORKDIR
+mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal IP = ${IP4}, External sub for IPv6 = ${IP6}"
+echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
 
-FIRST_PORT=22000
-LAST_PORT=220010
+FIRST_PORT=20000
+LAST_PORT=20100
+
+setup_environment
+install_3proxy
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-
-chmod +chmod +x $WORKDIR/boot_iptables.sh
-chmod +x $WORKDIR/boot_ifconfig.sh
-chmod +x /etc/rc.local
-
+chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
@@ -120,17 +119,39 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
+chmod +x /etc/rc.local
 bash /etc/rc.local
 
 gen_proxy_file_for_user
 
-echo "Cleaning up"
-rm -rf /root/setup.sh
-rm -rf /root/3proxy-0.8.13
+rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
-echo "So Luong IPv6 Hien Tai:"
-ip -6 addr | grep inet6 | wc -l
-download_proxy
-echo "Starting IPv6 rotation in the background"
-rotate_ipv6 &
+
+# Menu loop
+while true; do
+    echo "1. Install 3proxy"
+    echo "2. Rotate IPv6 addresses"
+    echo "3. Download proxy"
+    echo "4. Exit"
+    echo -n "Enter your choice: "
+    read choice
+    case $choice in
+        1)
+            install_3proxy
+            ;;
+        2)
+            rotate_ipv6
+            ;;
+        3)
+            download_proxy
+            ;;
+        4)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid choice. Please try again."
+            ;;
+    esac
+done
