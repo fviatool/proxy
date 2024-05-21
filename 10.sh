@@ -1,4 +1,7 @@
 #!/bin/sh
+phiên bản khong hiển thị qua trinh cai đặt chi hien thi noi dung và khi chạy ko hiểu thi
+
+#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -17,9 +20,9 @@ gen64() {
 install_3proxy() {
     echo "Installing 3proxy..."
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- $URL | bsdtar -xvf- > /dev/null 2>&1
+    wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
-    make -f Makefile.Linux > /dev/null 2>&1
+    make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
     cp src/3proxy /usr/local/etc/3proxy/bin/
     cd $WORKDIR
@@ -67,7 +70,7 @@ EOF
 
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ip -6 addr add " $5 "/64 dev eth0"}' ${WORKDATA})
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
@@ -81,8 +84,7 @@ rotate_ipv6() {
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
     gen_data >$WORKDIR/data.txt
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-    bash $WORKDIR/boot_ifconfig.sh > /dev/null 2>&1
-    sleep 3600
+    bash $WORKDIR/boot_ifconfig.sh
     echo "IPv6 addresses rotated successfully."
 }
 
@@ -91,18 +93,17 @@ download_proxy() {
     curl -F "proxy.txt" https://transfer.sh
 }
 
-echo "Dang Tiet Lap Proxy Vui Lòng Đợi!"
-WORKDIR="/home/vlt
+WORKDIR="/home/vlt"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. External sub for IPv6 = ${IP6}"
+echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
-FIRST_PORT=20000
-LAST_PORT=20500
+FIRST_PORT=30000
+LAST_PORT=31500
 
 setup_environment
 install_3proxy
