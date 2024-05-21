@@ -182,32 +182,35 @@ EOF
     chmod +x ${WORKDIR}/boot_ifconfig.sh
 }
 
-# Định nghĩa hàm rotate_ipv6 để xoay IPv6 và cập nhật số lần xoay
 rotate_ipv6() {
-    # Hiển thị thông báo xoay IPv6
     echo "Rotating IPv6 addresses..."
-    
-    # Lấy IPv6 mới từ icanhazip.com và cập nhật dữ liệu
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-    gen_data >$WORKDIR/data.txt
-    gen_ifconfig
+    gen_data
+    gen_ifconfig > $WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
-    
-    # Hiển thị thông báo thành công và cập nhật số lần xoay
-    echo "IPv6 addresses rotated successfully."
+    gen_3proxy_cfg > /etc/3proxy/3proxy.cfg
+    killall 3proxy
+    service 3proxy start
     rotate_count=$((rotate_count + 1))
-    
-    # Hiển thị số lần xoay mới nhất
-    echo "Rotation count: $rotate_count"
+    echo "IPv6 addresses rotated successfully. Rotation count: $rotate_count"
 }
+# Định nghĩa hàm rotate_ipv6 để xoay IPv6 và cập nhật số lần xoay
+# Tạo dữ liệu và cấu hình ban đầu
+echo "Initializing proxy setup..."
+gen_data
+gen_ifconfig > $WORKDIR/boot_ifconfig.sh
+chmod +x $WORKDIR/boot_ifconfig.sh
+bash $WORKDIR/boot_ifconfig.sh
+gen_3proxy_cfg > /etc/3proxy/3proxy.cfg
+killall 3proxy
+service 3proxy start
 
-# Hàm để xoay IPv6 mỗi 10 phút
-auto_rotate_ipv6() {
-    while true; do
-        rotate_ipv6
-        sleep 600
-    done
-}
+# Vòng lặp để xoay IP sau mỗi 5 phút
+while true; do
+    rotate_ipv6
+    sleep 300
+done
+
 
 # Menu chính
 menu() {
