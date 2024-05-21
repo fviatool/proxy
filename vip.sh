@@ -120,19 +120,9 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal IP = ${IP4}, External sub for IPv6 = ${IP6}"
 
-while :; do
-  read -p "Enter FIRST_PORT in the range from 10000 to 20000: " FIRST_PORT
-  [[ $FIRST_PORT =~ ^[0-9]+$ ]] || { echo "Please enter a valid number"; continue; }
-  if ((FIRST_PORT >= 10000 && FIRST_PORT <= 20000)); then
-    echo "Confirmed! Valid number"
-    break
-  else
-    echo "Number is not in the allowed range, please try again"
-  fi
-done
-
-LAST_PORT=$(($FIRST_PORT + 222))
-echo "LAST_PORT is $LAST_PORT. Continuing..."
+FIRST_PORT=20000
+LAST_PORT=222
+    
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
