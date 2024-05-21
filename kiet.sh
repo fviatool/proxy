@@ -1,6 +1,18 @@
 #!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
+IP4=$(ip addr show | grep -oP '(?<=inet\s)192(\.\d+){2}\.\d+' | head -n 1)
+
+# Tự động lấy địa chỉ IPv6/64
+
+IP6=$(ip -6 addr show | grep -oP '(?<=inet6\s)[\da-fA-F:]+(?=/64)' | head -n 1)
+
+NETWORK_INTERFACE=$(ip route get 1 | awk 'NR==1 {print $(NF-2); exit}')
+echo "Detected network interface: $NETWORK_INTERFACE"
+
+# Ensure the network interface is up
+sudo ip link set dev $NETWORK_INTERFACE up
+
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
