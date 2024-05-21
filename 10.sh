@@ -1,7 +1,4 @@
 #!/bin/sh
-phiên bản khong hiển thị qua trinh cai đặt chi hien thi noi dung và khi chạy ko hiểu thi
-
-#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 random() {
@@ -95,7 +92,7 @@ download_proxy() {
 
 WORKDIR="/home/vlt"
 WORKDATA="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
+mkdir $WORKDIR && cd $_o
 
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
