@@ -1,82 +1,45 @@
 #!/bin/sh
-echo > /etc/sysctl.conf
-##
-tee -a /etc/sysctl.conf <<EOF
-net.ipv6.conf.default.disable_ipv6 = 0
-net.ipv6.conf.all.disable_ipv6 = 0
-EOF
-##
-sysctl -p
-IPC=$(curl -4 -s icanhazip.com | cut -d"." -f3)
-IPD=$(curl -4 -s icanhazip.com | cut -d"." -f4)
-##
-if [ $IPC == 4 ]
-then
-   tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
-	IPV6INIT=yes
-	IPV6_AUTOCONF=no
-	IPV6_DEFROUTE=yes
-	IPV6_FAILURE_FATAL=no
-	IPV6_ADDR_GEN_MODE=stable-privacy
-	IPV6ADDR=2403:6a40:0:40::$IPD:0000/64
-	IPV6_DEFAULTGW=2403:6a40:0:40::1
-	EOF
-elif [ $IPC == 5 ]
-then
-   tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
-	IPV6INIT=yes
-	IPV6_AUTOCONF=no
-	IPV6_DEFROUTE=yes
-	IPV6_FAILURE_FATAL=no
-	IPV6_ADDR_GEN_MODE=stable-privacy
-	IPV6ADDR=2403:6a40:0:41::$IPD:0000/64
-	IPV6_DEFAULTGW=2403:6a40:0:41::1
-	EOF
-elif [ $IPC == 244 ]
-then
-   tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
-	IPV6INIT=yes
-	IPV6_AUTOCONF=no
-	IPV6_DEFROUTE=yes
-	IPV6_FAILURE_FATAL=no
-	IPV6_ADDR_GEN_MODE=stable-privacy
-	IPV6ADDR=2403:6a40:2000:244::$IPD:0000/64
-	IPV6_DEFAULTGW=2403:6a40:2000:244::1
-	EOF
-else
-	tee -a /etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
-	IPV6INIT=yes
-	IPV6_AUTOCONF=no
-	IPV6_DEFROUTE=yes
-	IPV6_FAILURE_FATAL=no
-	IPV6_ADDR_GEN_MODE=stable-privacy
-	IPV6ADDR=2403:6a40:0:$IPC::$IPD:0000/64
-	IPV6_DEFAULTGW=2403:6a40:0:$IPC::1
-	EOF
-fi
-
-service network restart
-
-#!/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
+# Thư mục làm việc
+WORKDIR="/home/cloudfly"
+WORKDATA="${WORKDIR}/data.txt"
+mkdir -p $WORKDIR && cd $WORKDIR
+
+# IP và giao diện mạng
+IP4=$(curl -4 -s icanhazip.com)
+IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+main_interface=$(ip route get 8.8.8.8 | awk -- '{printf $5}')
+
+# Cấu hình dải cổng
+FIRST_PORT=20000
+LAST_PORT=21500
+
+# Biến để lưu số lần xoay IPv6
+rotate_count=0
+
+# Hàm tạo chuỗi ngẫu nhiên
 random() {
-	tr </dev/urandom -dc A-Za-z0-9 | head -c5
-	echo
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
 }
 
+# Mảng ký tự để tạo địa chỉ IPv6
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+
+# Hàm tạo địa chỉ IPv6 đầy đủ
 gen64() {
-	ip64() {
-		echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
-	}
-	echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
+# Hàm cài đặt 3proxy
 install_3proxy() {
-    echo "installing 3proxy"
+    echo "Installing 3proxy..."
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
-    wget -qO- $URL | bsdtar -xvf-
+    wget -qO- $URL | tar -xz
     cd 3proxy-3proxy-0.8.6
     make -f Makefile.Linux
     mkdir -p /usr/local/etc/3proxy/{bin,logs,stat}
@@ -84,10 +47,28 @@ install_3proxy() {
     cd $WORKDIR
 }
 
+# Hàm tạo dữ liệu
+gen_data() {
+    seq $FIRST_PORT $LAST_PORT | while read port; do
+        echo "$(random)/$(random)/$IP4/$port/$(gen64 $IP6)"
+    done > $WORKDATA
+}
+
+# Hàm tạo quy tắc iptables
+gen_iptables() {
+    awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 " -j ACCEPT"}' ${WORKDATA}
+}
+
+# Hàm tạo cấu hình ifconfig cho IPv6
+gen_ifconfig() {
+    awk -F "/" '{print "ifconfig '$main_interface' inet6 add " $5 "/64"}' ${WORKDATA}
+}
+
+# Hàm tạo cấu hình 3proxy
 gen_3proxy() {
     cat <<EOF
 daemon
-maxconn 4000
+maxconn 2000
 nserver 1.1.1.1
 nserver 8.8.4.4
 nserver 2001:4860:4860::8888
@@ -99,63 +80,49 @@ setuid 65535
 stacksize 6291456 
 flush
 
-$(awk -F "/" '{print "auth strong\n" \
+$(awk -F "/" '{print "auth none\n" \
 "allow " $1 "\n" \
-"proxy -6 -n -a -p" $4 ":"$2" -i" $3 " -e"$5" -U"$1":"$2"\n" \
+"proxy -6 -n -a -p" $4 " -i" $3 " -e"$5"\n" \
 "flush\n"}' ${WORKDATA})
 EOF
 }
 
+# Hàm tạo file proxy cho người dùng
 gen_proxy_file_for_user() {
-    cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
-EOF
+    awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA} > proxy.txt
 }
 
-gen_data() {
-    seq $FIRST_PORT $LAST_PORT | while read port; do
-        echo $IP4:$port:"user$(random):$(random): 
-	echo $(gen64 $IP6) ${WORKDATA2}"
-    done
+# Hàm xoay IPv6
+rotate_ipv6() {
+    echo "Rotating IPv6 addresses..."
+    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+    gen_data
+    gen_ifconfig > $WORKDIR/boot_ifconfig.sh
+    bash $WORKDIR/boot_ifconfig.sh
+    gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
+    killall 3proxy
+    /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
+    rotate_count=$((rotate_count + 1))
+    echo "IPv6 addresses rotated successfully. Rotation count: $rotate_count"
 }
 
-gen_iptables() {
-    cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
-EOF
+# Hàm cài đặt môi trường
+setup_environment() {
+    echo "Installing necessary packages"
+    yum -y install gcc net-tools bsdtar zip make >/dev/null
 }
 
-gen_ifconfig() {
-    cat <<EOF
-$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
-EOF
-}
-
-echo "installing apps"
-yum -y install gcc net-tools bsdtar zip >/dev/null
-
+# Cài đặt 3proxy và cấu hình ban đầu
+setup_environment
 install_3proxy
-
-echo "working folder = /home/bkns"
-WORKDIR="/home/bkns"
-WORKDATA="${WORKDIR}/ipv6.txt"
-WORKDATA2="${WORKDIR}/data.txt"
-mkdir $WORKDIR && cd $_
-
-IP4=$(curl -4 -s icanhazip.com)
-IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
-
-echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
-
-FIRST_PORT=22000
-LAST_PORT=22700
-
-gen_data >$WORKDIR/data.txt
-gen_iptables >$WORKDIR/boot_iptables.sh
-gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x boot_*.sh /etc/rc.local
-
-gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+gen_data
+gen_ifconfig > $WORKDIR/boot_ifconfig.sh
+chmod +x $WORKDIR/boot_ifconfig.sh
+bash $WORKDIR/boot_ifconfig.sh
+gen_iptables > $WORKDIR/boot_iptables.sh
+chmod +x $WORKDIR/boot_iptables.sh
+bash $WORKDIR/boot_iptables.sh
+gen_3proxy > /usr/local/etc/3proxy/3proxy.cfg
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
@@ -164,10 +131,50 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
+chmod +x /etc/rc.local
 bash /etc/rc.local
 
 gen_proxy_file_for_user
-rm -rf /root/setup.sh
-rm -rf /root/3proxy-3proxy-0.8.6
 
-echo "Starting Proxy"
+# Vòng lặp để xoay IP sau mỗi 5 phút
+auto_rotate_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 300
+    done
+}
+
+# Menu chính
+menu() {
+    while true; do
+        clear
+        echo "============================"
+        echo " IPv6 Rotation Menu "
+        echo "============================"
+        echo "1. Rotate IPv6 Now"
+        echo "2. Start Auto Rotation (every 5 minutes)"
+        echo "3. Exit"
+        echo "============================"
+        read -p "Please enter your choice: " choice
+
+        case $choice in
+            1)
+                rotate_ipv6
+                read -p "Press Enter to continue..."
+                ;;
+            2)
+                auto_rotate_ipv6
+                ;;
+            3)
+                exit 0
+                ;;
+            *)
+                echo "Invalid choice, please try again."
+                read -p "Press Enter to continue..."
+                ;;
+        esac
+    done
+}
+
+# Chạy menu
+menu
