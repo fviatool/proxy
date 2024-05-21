@@ -89,8 +89,7 @@ download_proxy() {
 echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
+WORKDIR="/home/ken"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
