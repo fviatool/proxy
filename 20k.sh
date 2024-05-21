@@ -59,9 +59,10 @@ gen_data() {
     done
 }
 
+
 gen_iptables() {
     cat <<EOF
-    $(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA}) 
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA})
 EOF
 }
 
@@ -70,6 +71,10 @@ gen_ifconfig() {
 $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
+
+setup_environment() {
+    echo "Installing necessary packages"
+    yum -y install gcc net-tools bsdtar zip make >/dev/null
 
 rotate_ipv6() {
     echo "Rotating IPv6 addresses..."
@@ -84,9 +89,6 @@ download_proxy() {
     cd $WORKDIR || exit 1
     curl -F "proxy.txt" https://transfer.sh
 }
-
-echo "installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
 
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
@@ -104,9 +106,10 @@ LAST_PORT=20100
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
 gen_ifconfig >$WORKDIR/boot_ifconfig.sh
-chmod +x boot_*.sh /etc/rc.local
-
+echo NM_CONTROLLED="no" >> /etc/sysconfig/network-scripts/ifcfg-${main_interface}
+chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
+
 
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
@@ -115,9 +118,11 @@ ulimit -n 10048
 /usr/local/etc/3proxy/bin/3proxy /usr/local/etc/3proxy/3proxy.cfg
 EOF
 
+chmod +x /etc/rc.local
 bash /etc/rc.local
 
 gen_proxy_file_for_user
+
 rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
