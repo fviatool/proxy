@@ -86,9 +86,11 @@ download_proxy() {
     curl -F "file=@proxy.txt" https://file.io
 }
 
-echo "installing apps"
-yum -y install wget gcc net-tools bsdtar zip >/dev/null
+yum -y install wget gcc net-tools bsdtar zip curl >/dev/null
 
+install_3proxy
+
+echo "Setting up working directory"
 WORKDIR="/home/ken"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
