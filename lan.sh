@@ -101,8 +101,8 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
-FIRST_PORT=20000
-LAST_PORT=22222
+FIRST_PORT=10000
+LAST_PORT=10222
 
 setup_environment
 install_3proxy
