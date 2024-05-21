@@ -82,6 +82,7 @@ rotate_ipv6() {
     gen_data >$WORKDIR/data.txt
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
+    sleep 3600
     echo "IPv6 addresses rotated successfully."
 }
 
