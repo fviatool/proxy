@@ -74,10 +74,10 @@ EOF
 setup_environment() {
     echo "Installing necessary packages"
     yum -y install gcc net-tools bsdtar zip make >/dev/null
-}
+}.  apt -y install gcc net-tools bsdtar zip make >/dev/null
 
 rotate_ipv6() {
-    echo "Rotating IPv6 addresses..."
+    echo "Rotating IPv6 Dang Xoay ipv6..."
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
     gen_data >$WORKDIR/data.txt
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
