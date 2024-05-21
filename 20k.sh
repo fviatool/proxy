@@ -80,10 +80,13 @@ rotate_ipv6() {
     echo "IPv6 addresses rotated successfully."
 }
 
+download_proxy() {
+    cd $WORKDIR || exit 1
+    curl -F "proxy.txt" https://transfer.sh
+}
+
 echo "installing apps"
 yum -y install wget gcc net-tools bsdtar zip >/dev/null
-
-install_3proxy
 
 echo "working folder = /home/cloudfly"
 WORKDIR="/home/cloudfly"
@@ -96,7 +99,7 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
 FIRST_PORT=20000
-    LAST_PORT=200100
+LAST_PORT=200100
 
 gen_data >$WORKDIR/data.txt
 gen_iptables >$WORKDIR/boot_iptables.sh
@@ -118,3 +121,31 @@ gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
+
+# Menu loop
+while true; do
+    echo "1. Install 3proxy"
+    echo "2. Rotate IPv6 addresses"
+    echo "3. Download proxy"
+    echo "4. Exit"
+    echo -n "Enter your choice: "
+    read choice
+    case $choice in
+        1)
+            install_3proxy
+            ;;
+        2)
+            rotate_ipv6
+            ;;
+        3)
+            download_proxy
+            ;;
+        4)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid choice. Please try again."
+            ;;
+    esac
+done
