@@ -76,6 +76,8 @@ setup_environment() {
     yum -y install gcc net-tools bsdtar zip make >/dev/null
 }
 
+rotate_count=0
+
 rotate_ipv6() {
     echo "Rotating IPv6 addresses..."
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
@@ -83,6 +85,8 @@ rotate_ipv6() {
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
     echo "IPv6 addresses rotated successfully."
+    rotate_count=$((rotate_count + 1))
+    echo "Rotation count: $rotate_count"
     sleep 3600
 }
 
