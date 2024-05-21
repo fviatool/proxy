@@ -1,4 +1,16 @@
 #!/bin/sh
+# Hiển thị thông tin giao diện mạng eth0
+ip addr show eth0
+
+# Tạm ngưng và khởi động lại giao diện mạng eth0
+sudo ifdown eth0 && sudo ifup eth0
+
+# Xác định giao diện mạng mặc định và lưu vào biến NETWORK_INTERFACE
+NETWORK_INTERFACE=$(ip route get 1 | awk 'NR==1 {print $(NF-2); exit}')
+echo "Detected network interface: $NETWORK_INTERFACE"
+
+# Đảm bảo rằng giao diện mạng đang hoạt động
+sudo ip link set dev $NETWORK_INTERFACE up
 
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
