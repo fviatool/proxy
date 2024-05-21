@@ -90,7 +90,7 @@ download_proxy() {
     curl -F "proxy.txt" https://transfer.sh
 }
 
-echo "working folder = /home/cloudfly"
+echo "working folder = /home/vlt"
 WORKDIR="/home/cloudfly"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
@@ -132,31 +132,114 @@ rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
 
-# Menu loop
-while true; do
-    echo "1. Install 3proxy"
-    echo "2. Rotate IPv6 addresses"
-    echo "3. Download proxy"
-    echo "4. Exit"
-    echo -n "Enter your choice: "
-    read choice
-    case $choice in
-        1)
-            install_3proxy
-            ;;
-        2)
-            rotate_ipv6
-            ;;
-        3)
-            download_proxy
-            ;;
-        4)
-            echo "Exiting..."
-            exit 0
-            ;;
-        *)
-            echo "Invalid choice. Please try again."
-            ;;
-    esac
-done
-download_proxy
+# Khởi tạo biến rotate_count để lưu trữ số lần xoay IPv6
+rotate_count=0
+
+# Thư mục làm việc
+WORKDIR="/home/proxy-installer"
+WORKDATA="${WORKDIR}/data.txt"
+
+# Hàm tạo địa chỉ IPv6 ngẫu nhiên
+random() {
+    tr </dev/urandom -dc A-Za-z0-9 | head -c5
+    echo
+}
+
+# Mảng chứa các ký tự để tạo địa chỉ IPv6
+array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+
+# Lấy giao diện mạng chính
+main_interface=$(ip route get 8.8.8.8 | awk -- '{printf $5}')
+
+# Hàm tạo địa chỉ IPv6 đầy đủ
+gen64() {
+    ip64() {
+        echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
+    }
+    echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
+}
+
+# Hàm tạo dữ liệu
+gen_data() {
+    seq $FIRST_PORT $LAST_PORT | while read port; do
+        echo "$(random)/$(random)/$IP4/$port/$(gen64 $IP6)"
+    done
+}
+
+# Hàm tạo quy tắc iptables
+gen_iptables() {
+    cat <<EOF >${WORKDIR}/boot_iptables.sh
+$(awk -F "/" '{print "iptables -A INPUT -p tcp --dport " $4 " -s " ALLOWED_IP_ADDRESS " -j ACCEPT"}' ${WORKDATA})
+EOF
+    chmod +x ${WORKDIR}/boot_iptables.sh
+}
+
+# Hàm tạo cấu hình ifconfig cho IPv6
+gen_ifconfig() {
+    cat <<EOF >${WORKDIR}/boot_ifconfig.sh
+$(awk -F "/" '{print "ifconfig '$main_interface' inet6 add " $5 "/64"}' ${WORKDATA})
+EOF
+    chmod +x ${WORKDIR}/boot_ifconfig.sh
+}
+
+# Định nghĩa hàm rotate_ipv6 để xoay IPv6 và cập nhật số lần xoay
+rotate_ipv6() {
+    # Hiển thị thông báo xoay IPv6
+    echo "Rotating IPv6 addresses..."
+    
+    # Lấy IPv6 mới từ icanhazip.com và cập nhật dữ liệu
+    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+    gen_data >$WORKDIR/data.txt
+    gen_ifconfig
+    bash $WORKDIR/boot_ifconfig.sh
+    
+    # Hiển thị thông báo thành công và cập nhật số lần xoay
+    echo "IPv6 addresses rotated successfully."
+    rotate_count=$((rotate_count + 1))
+    
+    # Hiển thị số lần xoay mới nhất
+    echo "Rotation count: $rotate_count"
+}
+
+# Hàm để xoay IPv6 mỗi 10 phút
+auto_rotate_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 600
+    done
+}
+
+# Menu chính
+menu() {
+    while true; do
+        clear
+        echo "============================"
+        echo " IPv6 Rotation Menu "
+        echo "============================"
+        echo "1. Rotate IPv6 Now"
+        echo "2. Start Auto Rotation (every 10 minutes)"
+        echo "3. Exit"
+        echo "============================"
+        read -p "Please enter your choice: " choice
+
+        case $choice in
+            1)
+                rotate_ipv6
+                read -p "Press Enter to continue..."
+                ;;
+            2)
+                auto_rotate_ipv6
+                ;;
+            3)
+                exit 0
+                ;;
+            *)
+                echo "Invalid choice, please try again."
+                read -p "Press Enter to continue..."
+                ;;
+        esac
+    done
+}
+
+# Chạy menu
+menu
