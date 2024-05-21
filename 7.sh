@@ -15,7 +15,6 @@ gen64() {
 }
 
 install_3proxy() {
-    echo "Installing 3proxy..."
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
     wget -qO- $URL | bsdtar -xvf-
     cd 3proxy-3proxy-0.8.6
@@ -72,7 +71,6 @@ EOF
 }
 
 setup_environment() {
-    echo "Installing necessary packages"
     yum -y install gcc net-tools bsdtar zip make >/dev/null
 }
 
@@ -127,7 +125,7 @@ gen_proxy_file_for_user
 
 rm -rf /root/3proxy-3proxy-0.8.6
 
-echo "Starting Proxy"
+echo "Bat Dau 3Proxy"
 echo "So Luong IPv6 Hien Tai:"
 ip -6 addr | grep inet6 | wc -l
 download_proxy
