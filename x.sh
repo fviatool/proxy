@@ -71,15 +71,18 @@ $(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
+rotate_count=0
+
 rotate_ipv6() {
-    echo "Rotating IPv6 Dang Xoay ipv6..."
+    echo "Rotating IPv6 addresses..."
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
     gen_data >$WORKDIR/data.txt
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
-    sleep 3600
     echo "IPv6 addresses rotated successfully."
-    
+    rotate_count=$((rotate_count + 1))
+    echo "Rotation count: $rotate_count"
+    sleep 3600
 }
 
 download_proxy() {
@@ -100,7 +103,11 @@ echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 FIRST_PORT=20000
 LAST_PORT=21500
 
-setup_environment
+setup_environment() {
+    echo "Installing necessary packages"
+    yum -y install gcc net-tools bsdtar zip make >/dev/null
+}
+
 install_3proxy
 
 gen_data >$WORKDIR/data.txt
