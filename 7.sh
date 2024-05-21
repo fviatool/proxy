@@ -92,8 +92,7 @@ download_proxy() {
     curl -F "proxy.txt" https://transfer.sh
 }
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
+WORKDIR="/home/vlt"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
