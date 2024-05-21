@@ -91,8 +91,8 @@ download_proxy() {
     curl -F "proxy.txt" https://transfer.sh
 }
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
+echo "working folder = /home/vlt"
+WORKDIR="/home/vlt"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
@@ -102,7 +102,7 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
 FIRST_PORT=20000
-LAST_PORT=20500
+LAST_PORT=22222
 
 setup_environment
 install_3proxy
