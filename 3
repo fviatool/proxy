@@ -94,7 +94,11 @@ rotate_ipv6() {
         fi
     fi
 }
-# Function to install 3proxy
+
+setup_environment() {
+    echo "Installing necessary packages"
+    yum -y install gcc net-tools bsdtar zip make >/dev/null
+
 install_3proxy() {
     echo "Cài đặt 3proxy..."
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
