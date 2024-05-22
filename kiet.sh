@@ -1,24 +1,15 @@
-#!/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+#!/bin/bash
 
-IP4=$(ip addr show | grep -oP '(?<=inet\s)192(\.\d+){2}\.\d+' | head -n 1)
-
-# Tự động lấy địa chỉ IPv6/64
-
-IP6=$(ip -6 addr show | grep -oP '(?<=inet6\s)[\da-fA-F:]+(?=/64)' | head -n 1)
-
-NETWORK_INTERFACE=$(ip route get 1 | awk 'NR==1 {print $(NF-2); exit}')
-echo "Detected network interface: $NETWORK_INTERFACE"
-
-# Ensure the network interface is up
-sudo ip link set dev $NETWORK_INTERFACE up
-
+# Định nghĩa hàm random
 random() {
     tr </dev/urandom -dc A-Za-z0-9 | head -c5
     echo
 }
 
+# Mảng chứa các ký tự hex
 array=(1 2 3 4 5 6 7 8 9 0 a b c d e f)
+
+# Hàm tạo địa chỉ IPv6
 gen64() {
     ip64() {
         echo "${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}${array[$RANDOM % 16]}"
@@ -26,6 +17,7 @@ gen64() {
     echo "$1:$(ip64):$(ip64):$(ip64):$(ip64)"
 }
 
+# Hàm cài đặt 3proxy
 install_3proxy() {
     echo "Installing 3proxy..."
     URL="https://github.com/z3APA3A/3proxy/archive/3proxy-0.8.6.tar.gz"
@@ -37,6 +29,7 @@ install_3proxy() {
     cd $WORKDIR
 }
 
+# Hàm tạo cấu hình 3proxy
 gen_3proxy() {
     cat <<EOF
 daemon
@@ -59,35 +52,41 @@ $(awk -F "/" '{print "\n" \
 EOF
 }
 
+# Hàm tạo file proxy.txt cho người dùng
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
 $(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
 EOF
 }
 
+# Hàm tạo dữ liệu
 gen_data() {
     seq $FIRST_PORT $LAST_PORT | while read port; do
         echo "//$IP4/$port/$(gen64 $IP6)"
     done
 }
 
+# Hàm tạo iptables
 gen_iptables() {
     cat <<EOF
-$(awk -F "/" '{print "iptables -w -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA})
+$(awk -F "/" '{print "iptables -I INPUT -p tcp --dport " $4 "  -m state --state NEW -j ACCEPT"}' ${WORKDATA})
 EOF
 }
 
+# Hàm tạo ifconfig
 gen_ifconfig() {
     cat <<EOF
-$(awk -F "/" '{print "ip -6 addr add " $5 "/64 dev eth0"}' ${WORKDATA})
+$(awk -F "/" '{print "ifconfig eth0 inet6 add " $5 "/64"}' ${WORKDATA})
 EOF
 }
 
+# Hàm cài đặt môi trường
 setup_environment() {
     echo "Installing necessary packages"
     yum -y install gcc net-tools bsdtar zip make >/dev/null
 }
 
+# Hàm xoay IPv6
 rotate_ipv6() {
     echo "Rotating IPv6 addresses..."
     IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
@@ -95,26 +94,34 @@ rotate_ipv6() {
     gen_ifconfig >$WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
     echo "IPv6 addresses rotated successfully."
+    rotate_count=$((rotate_count + 1))
+    echo "Rotation count: $rotate_count"
+    sleep 3600
 }
 
+# Hàm download proxy
 download_proxy() {
     cd $WORKDIR || exit 1
-    curl -F "proxy.txt=@proxy.txt" https://transfer.sh
+    curl -F "proxy.txt" https://transfer.sh
 }
 
-echo "working folder = /home/cloudfly"
-WORKDIR="/home/cloudfly"
+# Thư mục làm việc
+echo "working folder = /home/vlt"
+WORKDIR="/home/vlt"
 WORKDATA="${WORKDIR}/data.txt"
 mkdir $WORKDIR && cd $_
 
+# Lấy địa chỉ IPv4 và IPv6
 IP4=$(curl -4 -s icanhazip.com)
 IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
-echo "Internal ip = ${IP4}. External sub for ip6 = ${IP6}"
+echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
-FIRST_PORT=20000
-LAST_PORT=20100
+# Cổng bắt đầu và kết thúc
+FIRST_PORT=10000
+LAST_PORT=10222
 
+# Cài đặt môi trường
 setup_environment
 install_3proxy
 
@@ -124,6 +131,7 @@ gen_ifconfig >$WORKDIR/boot_ifconfig.sh
 chmod +x $WORKDIR/boot_*.sh /etc/rc.local
 gen_3proxy >/usr/local/etc/3proxy/3proxy.cfg
 
+# Thêm vào /etc/rc.local
 cat >>/etc/rc.local <<EOF
 bash ${WORKDIR}/boot_iptables.sh
 bash ${WORKDIR}/boot_ifconfig.sh
@@ -139,11 +147,13 @@ gen_proxy_file_for_user
 rm -rf /root/3proxy-3proxy-0.8.6
 
 echo "Starting Proxy"
+echo "So Luong IPv6 Hien Tai:"
+ip -6 addr | grep inet6 | wc -l
 
 # Menu loop
 while true; do
-    echo "1. Install 3proxy"
-    echo "2. Rotate IPv6 addresses"
+    echo "1. Thiết Lập Lại 3proxy"
+    echo "2. Xoay IPV6"
     echo "3. Download proxy"
     echo "4. Exit"
     echo -n "Enter your choice: "
