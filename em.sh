@@ -1,8 +1,8 @@
 #!/bin/bash
 
 WORKDIR="/home/cloudfly"
-MAXCOUNT=2222
 IFCFG="eth0"
+MAXCOUNT=2222
 START_PORT=10000
 
 # Function to generate IPv6 addresses
