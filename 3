@@ -135,13 +135,20 @@ echo "Starting Proxy"
 echo "So Luong IPv6 Hien Tai:"
 ip -6 addr | grep inet6 | wc -l
 
+auto_rotate_ipv6() {
+    while true; do
+        rotate_ipv6
+        sleep 600  # 10 minutes
+    done
+}
 # Menu loop
 while true; do
     echo "1. Thiết Lập Lại 3proxy"
-    echo "2. Xoay IPV6"
-    echo "3. Download proxy"
-    echo "4. Exit"
-    echo -n "Enter your choice: "
+    echo "2. Xoay IPV6 Ngay"
+    echo "3. Xoay IPV6 Tự Động (Mỗi 10 Phút)"
+    echo "4. Download proxy"
+    echo "5. Exit"
+    echo -n "Nhập lựa chọn của bạn: "
     read choice
     case $choice in
         1)
@@ -151,10 +158,13 @@ while true; do
             rotate_ipv6
             ;;
         3)
-            download_proxy
+            auto_rotate_ipv6 &
             ;;
         4)
-            echo "Exiting..."
+            download_proxy
+            ;;
+        5)
+            echo "Thoát..."
             exit 0
             ;;
         *)
