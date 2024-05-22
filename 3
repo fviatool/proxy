@@ -67,21 +67,27 @@ download_proxy() {
 # Function to rotate IPv6
 rotate_ipv6() {
     echo "Rotating IPv6 addresses..."
-    IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
+    NEW_IPV6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
     gen_data > $WORKDIR/data.txt
     gen_ifconfig > $WORKDIR/boot_ifconfig.sh
     bash $WORKDIR/boot_ifconfig.sh
     rotate_count=$((rotate_count + 1))
     echo "IPv6 addresses rotated successfully. Rotation count: $rotate_count"
-
-    # Kiểm tra xem địa chỉ IPv6 đã được làm mới hay chưa
-    if ip -6 addr show $main_interface | grep -q "$IP6"; then
-        echo "IPv6 address has been updated to $IP6."
+    
+    # Kiểm tra xem địa chỉ IPv6 mới đã tồn tại chưa
+    if ip -6 addr show $main_interface | grep -q "$NEW_IPV6"; then
+        echo "IPv6 address $NEW_IPV6 already exists. Skipping rotation."
     else
-        echo "Failed to update IPv6 address."
+        # Thêm địa chỉ IPv6 mới
+        if ip -6 addr add $NEW_IPV6/64 dev $main_interface; then
+            echo "IPv6 addresses rotated successfully."
+            echo "New IPv6 address: $NEW_IPV6"
+            rotate_count=$((rotate_count + 1))
+        else
+            echo "Failed to rotate IPv6 addresses."
+        fi
     fi
 }
-
 # Function to install 3proxy
 install_3proxy() {
     echo "Cài đặt 3proxy..."
