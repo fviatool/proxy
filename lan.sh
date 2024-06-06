@@ -28,7 +28,7 @@ install_3proxy() {
 gen_3proxy() {
     cat <<EOF
 daemon
-maxconn 2000
+maxconn 4000
 nserver 1.1.1.1
 nserver 8.8.4.4
 nserver 2001:4860:4860::8888
@@ -37,7 +37,10 @@ nscache 65536
 timeouts 1 5 30 60 180 1800 15 60
 setgid 65535
 setuid 65535
-stacksize 6291456 
+stacksize 60000
+auth iponly strong cache
+allow 14.224.163.75
+deny * * *
 flush
 
 $(awk -F "/" '{print "\n" \
@@ -49,7 +52,7 @@ EOF
 
 gen_proxy_file_for_user() {
     cat >proxy.txt <<EOF
-$(awk -F "/" '{print $3 ":" $4 ":" $1 ":" $2 }' ${WORKDATA})
+$(awk -F "/" '{print $3 ":" $4 "}' ${WORKDATA})
 EOF
 }
 
@@ -105,8 +108,8 @@ IP6=$(curl -6 -s icanhazip.com | cut -f1-4 -d':')
 
 echo "Internal ip = ${IP4}. Exteranl sub for ip6 = ${IP6}"
 
-FIRST_PORT=10000
-LAST_PORT=10222
+FIRST_PORT=19000
+LAST_PORT=22500
 
 setup_environment
 install_3proxy
@@ -130,7 +133,7 @@ bash /etc/rc.local
 gen_proxy_file_for_user
 
 rm -rf /root/3proxy-3proxy-0.8.6
-
+rm -rf lan.sh
 echo "Starting Proxy"
 echo "So Luong IPv6 Hien Tai:"
 ip -6 addr | grep inet6 | wc -l
@@ -162,4 +165,3 @@ while true; do
             ;;
     esac
 done
-
